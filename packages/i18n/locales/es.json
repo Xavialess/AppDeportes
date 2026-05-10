@@ -1,0 +1,132 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "loading": "Cargando...",
+    "error": "Algo salió mal",
+    "retry": "Reintentar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "close": "Cerrar",
+    "yes": "Sí",
+    "no": "No",
+    "or": "o"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "register": "Registrarse",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "name": "Nombre completo",
+    "phone": "Teléfono",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "resetPassword": "Restablecer contraseña",
+    "noAccount": "¿No tienes cuenta?",
+    "hasAccount": "¿Ya tienes cuenta?"
+  },
+  "match": {
+    "status": {
+      "open": "Abierto",
+      "confirmed": "Confirmado",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    },
+    "type": {
+      "open": "Partido abierto",
+      "reservation": "Reserva completa"
+    },
+    "date": "Fecha",
+    "time": "Horario",
+    "format": "Formato",
+    "sport": "Deporte",
+    "field": "Cancha",
+    "pricePerPlayer": "Precio por jugador",
+    "totalPrice": "Precio total",
+    "minPlayers": "Mínimo de jugadores",
+    "maxPlayers": "Máximo de jugadores",
+    "deadline": "Fecha límite de confirmación",
+    "enrolled": "{{count}} inscrito",
+    "enrolled_plural": "{{count}} inscritos",
+    "spotsLeft": "{{count}} cupo disponible",
+    "spotsLeft_plural": "{{count}} cupos disponibles",
+    "join": "Unirse al partido",
+    "cancel": "Cancelar partido",
+    "hide": "Ocultar partido",
+    "show": "Mostrar partido",
+    "postMatch": "Publicar partido",
+    "noMatches": "No hay partidos disponibles",
+    "cancelWarning": "Si el mínimo de jugadores no se alcanza antes de la fecha límite, el partido se cancelará automáticamente y recibirás un reembolso.",
+    "markAttendance": "Marcar asistencia"
+  },
+  "enrollment": {
+    "status": {
+      "pending": "Pendiente",
+      "confirmed": "Confirmado",
+      "cancelled": "Cancelado",
+      "refunded": "Reembolsado"
+    },
+    "myMatches": "Mis partidos",
+    "upcoming": "Próximos",
+    "past": "Anteriores"
+  },
+  "payment": {
+    "method": {
+      "in_app": "Pago en línea",
+      "in_person": "Pago en persona"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "completed": "Completado",
+      "refunded": "Reembolsado",
+      "failed": "Fallido"
+    },
+    "pay": "Pagar",
+    "total": "Total",
+    "refund": "Reembolso"
+  },
+  "profile": {
+    "title": "Mi perfil",
+    "matchesPlayed": "Partidos jugados",
+    "editProfile": "Editar perfil",
+    "proBadge": "Pro"
+  },
+  "owner": {
+    "dashboard": "Panel de propietario",
+    "myFields": "Mis canchas",
+    "myMatches": "Mis partidos",
+    "earnings": "Ganancias",
+    "plan": "Plan actual",
+    "enrollments": "Inscripciones",
+    "addField": "Agregar cancha",
+    "postMatch": "Publicar partido"
+  },
+  "admin": {
+    "dashboard": "Panel de administración",
+    "countries": "Países",
+    "cities": "Ciudades",
+    "sports": "Deportes",
+    "owners": "Propietarios",
+    "players": "Jugadores",
+    "matches": "Partidos",
+    "plans": "Planes",
+    "suspend": "Suspender cuenta",
+    "refund": "Procesar reembolso"
+  },
+  "errors": {
+    "required": "Este campo es obligatorio",
+    "invalidEmail": "Correo electrónico inválido",
+    "invalidPhone": "Teléfono inválido (formato: 09XXXXXXXX)",
+    "minLength": "Mínimo {{count}} caracteres",
+    "maxLength": "Máximo {{count}} caracteres",
+    "matchFull": "El partido está lleno",
+    "alreadyEnrolled": "Ya estás inscrito en este partido",
+    "matchNotFound": "Partido no encontrado",
+    "unauthorized": "No autorizado"
+  }
+}

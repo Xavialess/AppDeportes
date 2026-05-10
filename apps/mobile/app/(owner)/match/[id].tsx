@@ -23,7 +23,6 @@ interface MatchDetail {
   status: MatchStatus;
   type: 'open' | 'reservation';
   is_visible: boolean;
-  owner_id: string;
   enrolled_count: number | null;
   max_players: number | null;
   min_players: number | null;
@@ -110,7 +109,7 @@ export default function OwnerMatchDetailScreen() {
       const [matchRes, enrollmentsRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('id, date, start_time, end_time, status, type, is_visible, owner_id, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)')
+          .select('id, date, start_time, end_time, status, type, is_visible, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)')
           .eq('id', id)
           .single(),
         supabase
@@ -213,7 +212,7 @@ export default function OwnerMatchDetailScreen() {
             setCancellingMatch(true);
             try {
               const { data: sessionData } = await supabase.auth.getSession();
-              const userId = sessionData?.session?.user?.id ?? match.owner_id;
+              const userId = sessionData?.session?.user?.id ?? null;
 
               const { error: matchError } = await supabase
                 .from('matches')

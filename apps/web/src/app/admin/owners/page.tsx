@@ -25,7 +25,7 @@ export default async function OwnersPage() {
       user_id,
       subscription_status,
       cancellation_count,
-      plans(name, price_monthly, max_matches_per_month),
+      plans(name, price, max_matches_per_month),
       users(name, email)
     `)
     .order('user_id');
@@ -58,7 +58,7 @@ export default async function OwnersPage() {
             )}
             {(owners ?? []).map((o) => {
               const ownerUser = o.users as { name: string | null; email: string } | null;
-              const plan = o.plans as { name: string; price_monthly: number; max_matches_per_month: number } | null;
+              const plan = o.plans as { name: string; price: number; max_matches_per_month: number } | null;
               const status = o.subscription_status ?? 'inactive';
 
               const statusBadgeClass =
@@ -79,7 +79,7 @@ export default async function OwnersPage() {
                       <span>
                         <span style={{ fontWeight: 600 }}>{plan.name}</span>
                         <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)', marginLeft: 6 }}>
-                          ${plan.price_monthly}/mes · {plan.max_matches_per_month} partidos
+                          ${plan.price}/mes · {plan.max_matches_per_month} partidos
                         </span>
                       </span>
                     ) : (

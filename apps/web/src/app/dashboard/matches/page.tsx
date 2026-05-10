@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import styles from './matches.module.css';
 
 export const metadata: Metadata = {
-  title: 'Mis Partidos — AppDeportes',
+  title: 'Mis Partidos — cancha.',
 };
 
 type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';

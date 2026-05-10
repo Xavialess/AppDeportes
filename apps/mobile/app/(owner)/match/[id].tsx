@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
+import { colors, radius, spacing } from '../../../lib/theme';
 
 type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
@@ -52,11 +53,11 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
   cancelled: 'Cancelado',
 };
 
-const STATUS_COLORS: Record<MatchStatus, { bg: string; text: string }> = {
-  open: { bg: '#dcfce7', text: '#15803d' },
-  confirmed: { bg: '#dbeafe', text: '#1d4ed8' },
-  completed: { bg: '#f3f4f6', text: '#374151' },
-  cancelled: { bg: '#fee2e2', text: '#b91c1c' },
+const STATUS_STYLES: Record<MatchStatus, { bg: string; text: string }> = {
+  open: { bg: 'rgba(212,255,58,0.1)', text: colors.accent },
+  confirmed: { bg: 'rgba(96,165,250,0.1)', text: '#60a5fa' },
+  completed: { bg: 'rgba(255,255,255,0.06)', text: colors.mute },
+  cancelled: { bg: colors.errorBg, text: colors.error },
 };
 
 const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
@@ -66,10 +67,13 @@ const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
   refunded: 'Reembolsado',
 };
 
+const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
 function formatDate(dateStr: string): string {
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return `${DAYS_ES[date.getDay()]} ${day} ${MONTHS_ES[month - 1]}`;
 }
 
 function initials(name: string | null | undefined): string {
@@ -81,7 +85,7 @@ function initials(name: string | null | undefined): string {
     .join('');
 }
 
-export default function MatchDetailScreen() {
+export default function OwnerMatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [match, setMatch] = useState<MatchDetail | null>(null);
@@ -94,7 +98,7 @@ export default function MatchDetailScreen() {
   useEffect(() => {
     if (!id) return;
     loadAll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function loadAll() {
@@ -102,9 +106,7 @@ export default function MatchDetailScreen() {
       const [matchRes, enrollmentsRes] = await Promise.all([
         supabase
           .from('matches')
-          .select(
-            'id, date, start_time, end_time, status, type, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)'
-          )
+          .select('id, date, start_time, end_time, status, type, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)')
           .eq('id', id)
           .single(),
         supabase
@@ -145,9 +147,7 @@ export default function MatchDetailScreen() {
       if (updateError) throw updateError;
 
       setEnrollments((prev) =>
-        prev.map((e) =>
-          e.id === enrollment.id ? { ...e, attended: newAttended } : e
-        )
+        prev.map((e) => (e.id === enrollment.id ? { ...e, attended: newAttended } : e))
       );
     } catch {
       Alert.alert('Error', 'No se pudo actualizar la asistencia. Intenta de nuevo.');
@@ -161,7 +161,7 @@ export default function MatchDetailScreen() {
 
     Alert.alert(
       'Completar partido',
-      '¿Confirmas que el partido ha terminado? Podrás marcar la asistencia de los jugadores.',
+      '¿Confirmas que el partido ha terminado?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -192,7 +192,7 @@ export default function MatchDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -208,17 +208,15 @@ export default function MatchDetailScreen() {
     );
   }
 
-  const statusColor = STATUS_COLORS[match.status] ?? STATUS_COLORS.open;
-  const canMarkAttendance =
-    match.status === 'confirmed' || match.status === 'completed';
+  const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
+  const canMarkAttendance = match.status === 'confirmed' || match.status === 'completed';
   const canComplete = match.status === 'confirmed';
   const enrolled = match.enrolled_count ?? enrollments.length;
   const max = match.max_players;
 
   return (
     <View style={styles.flex}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Back nav */}
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backArrow}>
           <Text style={styles.backArrowText}>← Volver</Text>
         </TouchableOpacity>
@@ -236,11 +234,11 @@ export default function MatchDetailScreen() {
                 {match.fields?.address ? ` · ${match.fields.address}` : ''}
               </Text>
               <Text style={styles.matchDate}>
-                {formatDate(match.date)} · {match.start_time}–{match.end_time}
+                {formatDate(match.date)} · {match.start_time.slice(0, 5)}–{match.end_time.slice(0, 5)}
               </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
-              <Text style={[styles.statusText, { color: statusColor.text }]}>
+            <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+              <Text style={[styles.statusText, { color: statusStyle.text }]}>
                 {STATUS_LABELS[match.status]}
               </Text>
             </View>
@@ -252,33 +250,30 @@ export default function MatchDetailScreen() {
                 <View
                   style={[
                     styles.enrollFill,
-                    { width: `${Math.min((enrolled / max) * 100, 100)}%` },
+                    { width: `${Math.min((enrolled / max) * 100, 100)}%` as any },
                   ]}
                 />
               </View>
-              <Text style={styles.enrollCountText}>
-                {enrolled} / {max} jugadores
-              </Text>
+              <Text style={styles.enrollCountText}>{enrolled} / {max}</Text>
             </View>
           )}
 
           {match.type === 'open' && match.price_per_player != null && (
             <Text style={styles.priceLine}>
-              ${match.price_per_player.toFixed(2)} por jugador
-              {match.min_players != null
-                ? ` · Mín. ${match.min_players}`
-                : ''}
+              <Text style={styles.priceAmount}>${match.price_per_player.toFixed(2)}</Text>
+              {' '}por jugador
+              {match.min_players != null ? ` · Mín. ${match.min_players}` : ''}
             </Text>
           )}
 
           {match.type === 'reservation' && match.total_price != null && (
             <Text style={styles.priceLine}>
-              Reserva · ${match.total_price.toFixed(2)} total
+              Reserva · <Text style={styles.priceAmount}>${match.total_price.toFixed(2)}</Text> total
             </Text>
           )}
         </View>
 
-        {/* Complete match button */}
+        {/* Complete match CTA */}
         {canComplete && (
           <TouchableOpacity
             style={[styles.completeButton, completingMatch && styles.buttonDisabled]}
@@ -287,18 +282,17 @@ export default function MatchDetailScreen() {
             activeOpacity={0.8}
           >
             {completingMatch ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.accentFg} />
             ) : (
               <Text style={styles.completeButtonText}>Completar partido</Text>
             )}
           </TouchableOpacity>
         )}
 
-        {/* Enrollments section */}
+        {/* Players section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            Jugadores inscritos
-            {enrollments.length > 0 ? ` (${enrollments.length})` : ''}
+            Jugadores{enrollments.length > 0 ? ` · ${enrollments.length}` : ''}
           </Text>
           {canMarkAttendance && (
             <Text style={styles.sectionHint}>Toca ✓ para marcar asistencia</Text>
@@ -307,9 +301,7 @@ export default function MatchDetailScreen() {
 
         {enrollments.length === 0 ? (
           <View style={styles.emptyEnrollments}>
-            <Text style={styles.emptyEnrollmentsText}>
-              Aún no hay jugadores inscritos.
-            </Text>
+            <Text style={styles.emptyEnrollmentsText}>Aún no hay jugadores inscritos.</Text>
           </View>
         ) : (
           enrollments.map((enrollment) => {
@@ -327,22 +319,10 @@ export default function MatchDetailScreen() {
 
                 <View style={styles.playerInfo}>
                   <Text style={styles.playerName}>{playerName}</Text>
-                  {playerEmail ? (
-                    <Text style={styles.playerEmail}>{playerEmail}</Text>
-                  ) : null}
+                  {playerEmail ? <Text style={styles.playerEmail}>{playerEmail}</Text> : null}
                   <View style={styles.playerBadges}>
-                    <View
-                      style={[
-                        styles.badge,
-                        isPaid ? styles.badgePaid : styles.badgeCash,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.badgeText,
-                          isPaid ? styles.badgeTextPaid : styles.badgeTextCash,
-                        ]}
-                      >
+                    <View style={[styles.badge, isPaid ? styles.badgePaid : styles.badgeCash]}>
+                      <Text style={[styles.badgeText, isPaid ? styles.badgeTextPaid : styles.badgeTextCash]}>
                         {isPaid ? 'En app' : 'En persona'}
                       </Text>
                     </View>
@@ -356,10 +336,7 @@ export default function MatchDetailScreen() {
 
                 {canMarkAttendance && (
                   <TouchableOpacity
-                    style={[
-                      styles.attendanceToggle,
-                      attended && styles.attendanceToggleActive,
-                    ]}
+                    style={[styles.attendanceToggle, attended && styles.attendanceToggleActive]}
                     onPress={() => toggleAttendance(enrollment)}
                     disabled={isUpdating}
                     activeOpacity={0.75}
@@ -367,15 +344,10 @@ export default function MatchDetailScreen() {
                     {isUpdating ? (
                       <ActivityIndicator
                         size="small"
-                        color={attended ? '#ffffff' : '#16a34a'}
+                        color={attended ? colors.accentFg : colors.accent}
                       />
                     ) : (
-                      <Text
-                        style={[
-                          styles.attendanceToggleText,
-                          attended && styles.attendanceToggleTextActive,
-                        ]}
-                      >
+                      <Text style={[styles.attendanceToggleText, attended && styles.attendanceToggleTextActive]}>
                         ✓
                       </Text>
                     )}
@@ -386,7 +358,7 @@ export default function MatchDetailScreen() {
           })
         )}
 
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -395,175 +367,177 @@ export default function MatchDetailScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
     paddingHorizontal: 32,
   },
   container: {
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
     paddingTop: 56,
     paddingBottom: 40,
   },
   backArrow: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   backArrowText: {
     fontSize: 15,
-    color: '#16a34a',
+    color: colors.accent,
     fontWeight: '600',
   },
   matchCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: colors.card,
+    borderRadius: radius.cardLg,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 3,
+    borderColor: colors.line,
+    marginBottom: spacing.lg,
   },
   matchCardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   matchCardLeft: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   matchSport: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 4,
     letterSpacing: -0.2,
   },
   matchField: {
     fontSize: 13,
-    color: '#374151',
+    color: colors.mute,
     fontWeight: '500',
     marginBottom: 4,
   },
   matchDate: {
-    fontSize: 13,
-    color: '#64748b',
+    fontSize: 12,
+    color: colors.dim,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.badge,
+    alignSelf: 'flex-start',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
   enrollRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   enrollBarWrap: {
     flex: 1,
-    height: 6,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.card2,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
   enrollFill: {
-    height: 6,
-    backgroundColor: '#16a34a',
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
   },
   enrollCountText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.mute,
+    minWidth: 40,
+    textAlign: 'right',
   },
   priceLine: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.mute,
     fontWeight: '500',
+    marginTop: spacing.xs,
+  },
+  priceAmount: {
+    color: colors.accent,
+    fontWeight: '700',
   },
   completeButton: {
-    backgroundColor: '#1d4ed8',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 15,
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#1d4ed8',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    marginBottom: spacing.xl,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   completeButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: colors.accentFg,
+    fontSize: 15,
     fontWeight: '700',
+    letterSpacing: -0.1,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   sectionHint: {
-    fontSize: 12,
-    color: '#64748b',
+    fontSize: 11,
+    color: colors.dim,
   },
   emptyEnrollments: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.line,
   },
   emptyEnrollmentsText: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mute,
   },
   playerRow: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 8,
+    borderColor: colors.line,
+    marginBottom: spacing.sm,
   },
   playerAvatar: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#dcfce7',
+    backgroundColor: 'rgba(212,255,58,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   playerAvatarText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#15803d',
+    color: colors.accent,
   },
   playerInfo: {
     flex: 1,
@@ -571,91 +545,90 @@ const styles = StyleSheet.create({
   playerName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 2,
   },
   playerEmail: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.dim,
     marginBottom: 6,
   },
   playerBadges: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.xs,
     flexWrap: 'wrap',
   },
   badge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: radius.badge,
   },
   badgePaid: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: 'rgba(96,165,250,0.1)',
   },
   badgeCash: {
-    backgroundColor: '#fef9c3',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   badgeTextPaid: {
-    color: '#1d4ed8',
+    color: '#60a5fa',
   },
   badgeTextCash: {
-    color: '#92400e',
+    color: colors.mute,
   },
   enrollmentStatusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
+    borderRadius: radius.badge,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   enrollmentStatusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.dim,
+    letterSpacing: 0.2,
   },
   attendanceToggle: {
     width: 38,
     height: 38,
     borderRadius: 19,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.line2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
+    marginLeft: spacing.md,
   },
   attendanceToggleActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   attendanceToggleText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#d1d5db',
+    color: colors.line2,
   },
   attendanceToggleTextActive: {
-    color: '#ffffff',
+    color: colors.accentFg,
   },
   errorLarge: {
     fontSize: 15,
-    color: '#dc2626',
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 12,
     paddingHorizontal: 28,
   },
   retryButtonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontWeight: '700',
     fontSize: 14,
-  },
-  bottomSpacer: {
-    height: 24,
   },
 });

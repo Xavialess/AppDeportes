@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { colors, radius, spacing } from '../../lib/theme';
 
 // ---- types ---------------------------------------------------------------
 
@@ -124,7 +125,6 @@ export default function MatchListScreen() {
         return;
       }
 
-      // Batch enrollment counts in a single query
       const matchIds = rawMatches.map((m) => m.id);
       const { data: enrollmentData, error: enrollErr } = await supabase
         .from('enrollments')
@@ -176,7 +176,7 @@ export default function MatchListScreen() {
 
   function renderMatchCard({ item }: { item: Match }) {
     const sportLabel = item.sports
-      ? `${item.sports.name}${item.format ? ' ' + item.format : ''}`
+      ? `${item.sports.name}${item.format ? ' · ' + item.format : ''}`
       : item.format ?? '—';
     const dateLabel = formatMatchDate(item.date, item.start_time);
     const deadlineLabel = formatDeadline(item.confirmation_deadline);
@@ -192,9 +192,11 @@ export default function MatchListScreen() {
       >
         <View style={styles.cardHeader}>
           <Text style={styles.cardSport}>{sportLabel}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Abierto</Text>
-          </View>
+          {slotsLeft !== null && slotsLeft > 0 && (
+            <View style={styles.slotsBadge}>
+              <Text style={styles.slotsBadgeText}>{slotsLeft} CUPO{slotsLeft !== 1 ? 'S' : ''}</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.cardField} numberOfLines={1}>
@@ -203,21 +205,28 @@ export default function MatchListScreen() {
 
         <View style={styles.cardMeta}>
           <Text style={styles.cardMetaText}>{dateLabel}</Text>
+          {deadlineLabel ? (
+            <Text style={styles.cardDeadline}>{deadlineLabel}</Text>
+          ) : null}
         </View>
 
         <View style={styles.cardFooter}>
           <Text style={styles.cardPrice}>{formatPrice(item.price_per_player)}</Text>
-
-          <View style={styles.cardRight}>
-            {slotsLeft !== null && (
-              <Text style={styles.cardSlots}>
-                {item.enrolled_count}/{item.max_players} jugadores
+          {item.max_players != null && (
+            <View style={styles.progressRow}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min(100, (item.enrolled_count / item.max_players) * 100)}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressLabel}>
+                {item.enrolled_count}/{item.max_players}
               </Text>
-            )}
-            {deadlineLabel ? (
-              <Text style={styles.cardDeadline}>{deadlineLabel}</Text>
-            ) : null}
-          </View>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -227,11 +236,12 @@ export default function MatchListScreen() {
     return (
       <View>
         <View style={styles.screenHeader}>
-          <Text style={styles.screenTitle}>Partidos</Text>
-          <Text style={styles.screenSubtitle}>Cerca de ti</Text>
+          <Text style={styles.screenTag}>Partidos abiertos</Text>
+          <Text style={styles.screenTitle}>
+            cancha<Text style={styles.screenTitleDot}>.</Text>
+          </Text>
         </View>
 
-        {/* Sport filter chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -266,7 +276,7 @@ export default function MatchListScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -302,7 +312,7 @@ export default function MatchListScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#16a34a"
+            tintColor={colors.accent}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -316,73 +326,71 @@ export default function MatchListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   list: {
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   screenHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingHorizontal: spacing.xl,
+    paddingTop: 64,
+    paddingBottom: spacing.lg,
+  },
+  screenTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.dim,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
   screenTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.6,
   },
-  screenSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 2,
+  screenTitleDot: {
+    color: colors.accent,
   },
   chipsContainer: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   chipsContent: {
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
   },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   chipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    backgroundColor: colors.accent,
   },
   chipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
   },
   chipTextActive: {
-    color: '#ffffff',
+    color: colors.accentFg,
   },
   card: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: colors.card,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    borderRadius: radius.cardLg,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: colors.line,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -391,61 +399,85 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardSport: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: spacing.sm,
+    letterSpacing: -0.2,
   },
-  badge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 10,
+  slotsBadge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: radius.badge,
   },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#16a34a',
+  slotsBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.accentFg,
+    letterSpacing: 0.3,
   },
   cardField: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
+    fontSize: 13,
+    color: colors.mute,
+    marginBottom: spacing.sm,
   },
   cardMeta: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
   cardMetaText: {
-    fontSize: 13,
-    color: '#64748b',
+    fontSize: 12,
+    color: colors.mute,
+    fontWeight: '500',
+  },
+  cardDeadline: {
+    fontSize: 11,
+    color: colors.accent,
+    fontWeight: '600',
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 12,
+    borderTopColor: colors.line,
+    paddingTop: spacing.md,
+    gap: spacing.md,
   },
   cardPrice: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#16a34a',
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
   },
-  cardRight: {
-    alignItems: 'flex-end',
-    gap: 2,
+  progressRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    justifyContent: 'flex-end',
   },
-  cardSlots: {
-    fontSize: 13,
-    color: '#374151',
-    fontWeight: '500',
+  progressTrack: {
+    flex: 1,
+    maxWidth: 80,
+    height: 4,
+    backgroundColor: colors.card2,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
   },
-  cardDeadline: {
-    fontSize: 12,
-    color: '#f59e0b',
-    fontWeight: '500',
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+  },
+  progressLabel: {
+    fontSize: 11,
+    color: colors.mute,
+    fontWeight: '600',
   },
   empty: {
     paddingHorizontal: 40,
@@ -455,40 +487,40 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mute,
     textAlign: 'center',
     lineHeight: 20,
   },
   errorBox: {
-    margin: 20,
-    backgroundColor: '#fef2f2',
+    margin: spacing.xl,
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
-    padding: 16,
+    borderColor: colors.errorBorder,
+    borderRadius: radius.card,
+    padding: spacing.lg,
     alignItems: 'center',
   },
   errorText: {
     fontSize: 14,
-    color: '#dc2626',
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   retryButton: {
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.badge,
   },
   retryText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

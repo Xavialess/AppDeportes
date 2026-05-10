@@ -43,7 +43,7 @@ function SessionGate({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color="#d4ff3a" />
       </View>
     );
   }
@@ -54,7 +54,7 @@ function SessionGate({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <I18nextProvider i18n={i18n}>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <SessionGate>
         <Stack screenOptions={{ headerShown: false }} />
       </SessionGate>
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#0a0a0a',
   },
 });

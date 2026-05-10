@@ -3,7 +3,7 @@ import styles from './login.module.css';
 import { LoginForm } from './LoginForm';
 
 export const metadata: Metadata = {
-  title: 'Iniciar sesión — AppDeportes',
+  title: 'Iniciar sesión — cancha.',
 };
 
 interface LoginPageProps {
@@ -21,9 +21,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="login-heading">
-        <div className={styles.brand} aria-hidden="true">
-          <div className={styles.brandIcon}>⚽</div>
-          <span className={styles.brandName}>AppDeportes</span>
+        <div className={styles.brand}>
+          <span className={styles.brandName}>
+            cancha<span className={styles.brandDot}>.</span>
+          </span>
         </div>
 
         <h1 id="login-heading" className={styles.heading}>
@@ -44,7 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <p className={styles.footerNote}>
           ¿Problemas para acceder?{' '}
-          <a href="mailto:soporte@appdeportes.ec">Contacta al soporte</a>
+          <a href="mailto:soporte@cancha.ec">Contacta al soporte</a>
         </p>
       </section>
     </main>

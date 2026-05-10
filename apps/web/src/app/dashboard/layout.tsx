@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { LogoutButton } from '@/app/(dashboard)/LogoutButton';
+import { NavLink } from '@/app/dashboard/NavLink';
 import styles from '@/app/(dashboard)/dashboard.module.css';
 
 interface DashboardLayoutProps {
@@ -9,12 +10,9 @@ interface DashboardLayoutProps {
 }
 
 const NAV_ITEMS = [
-  { icon: '🏠', label: 'Inicio', href: '/dashboard', active: true },
-  { icon: '⚽', label: 'Mis partidos', href: '/dashboard/matches', active: false },
-  { icon: '🏟️', label: 'Canchas', href: '/dashboard/fields', active: false },
-  { icon: '👥', label: 'Jugadores', href: '/dashboard/players', active: false },
-  { icon: '📅', label: 'Calendario', href: '/dashboard/calendar', active: false },
-  { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', active: false },
+  { icon: '🏠', label: 'Inicio', href: '/dashboard', exact: true },
+  { icon: '⚽', label: 'Mis partidos', href: '/dashboard/matches', exact: false },
+  { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', exact: false },
 ] as const;
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -64,13 +62,12 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         <ul className={styles.nav} role="list">
           {NAV_ITEMS.map((item) => (
             <li key={item.href}>
-              <span
-                className={`${styles.navItem} ${item.active ? styles.navItemActive : ''}`}
-                aria-current={item.active ? 'page' : undefined}
-              >
-                <span className={styles.navIcon} aria-hidden="true">{item.icon}</span>
-                {item.label}
-              </span>
+              <NavLink
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                exact={item.exact}
+              />
             </li>
           ))}
         </ul>

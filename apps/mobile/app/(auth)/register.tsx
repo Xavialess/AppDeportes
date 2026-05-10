@@ -69,6 +69,13 @@ export default function RegisterScreen() {
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          data: {
+            name: name.trim(),
+            phone: phone.trim() || undefined,
+            role,
+          },
+        },
       });
 
       if (signUpError) {
@@ -83,30 +90,6 @@ export default function RegisterScreen() {
       if (!authData.user) {
         setError('No se pudo crear la cuenta. Intenta de nuevo.');
         return;
-      }
-
-      const { error: insertError } = await supabase.from('users').insert({
-        id: authData.user.id,
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim() || null,
-        role,
-      });
-
-      if (insertError) {
-        setError('No se pudo guardar tu perfil. Intenta de nuevo.');
-        return;
-      }
-
-      if (role === 'owner') {
-        const { error: profileError } = await supabase
-          .from('owner_profiles')
-          .insert({ user_id: authData.user.id });
-
-        if (profileError) {
-          setError('No se pudo crear el perfil de propietario. Intenta de nuevo.');
-          return;
-        }
       }
 
       if (role === 'player') {

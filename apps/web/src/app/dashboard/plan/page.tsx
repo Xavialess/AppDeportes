@@ -13,9 +13,8 @@ type SubscriptionStatus = 'active' | 'inactive' | 'trial';
 interface Plan {
   id: string;
   name: string;
-  price_monthly: number;
+  price: number;
   max_matches_per_month: number;
-  is_active: boolean;
 }
 
 interface OwnerProfile {
@@ -61,7 +60,7 @@ export default async function PlanPage() {
   // Fetch owner profile + current plan
   const { data: ownerProfileRaw } = await supabase
     .from('owner_profiles')
-    .select('id, user_id, plan_id, subscription_status, plans(id, name, price_monthly, max_matches_per_month, is_active)')
+    .select('id, user_id, plan_id, subscription_status, plans(id, name, price, max_matches_per_month)')
     .eq('user_id', user.id)
     .single();
 
@@ -97,9 +96,8 @@ export default async function PlanPage() {
   // Fetch all active plans
   const { data: plansRaw } = await supabase
     .from('plans')
-    .select('id, name, price_monthly, max_matches_per_month, is_active')
-    .eq('is_active', true)
-    .order('price_monthly', { ascending: true });
+    .select('id, name, price, max_matches_per_month')
+    .order('price', { ascending: true });
 
   const plans = (plansRaw ?? []) as Plan[];
 
@@ -137,7 +135,7 @@ export default async function PlanPage() {
               <div>
                 <div className={styles.currentPlanName}>{currentPlan.name}</div>
                 <div className={styles.currentPlanPrice}>
-                  ${currentPlan.price_monthly.toFixed(2)}
+                  ${currentPlan.price.toFixed(2)}
                   <span className={styles.currentPlanPeriod}>/mes</span>
                 </div>
               </div>
@@ -192,7 +190,7 @@ export default async function PlanPage() {
                   )}
                   <div className={styles.planCardName}>{plan.name}</div>
                   <div className={styles.planCardPrice}>
-                    ${plan.price_monthly.toFixed(2)}
+                    ${plan.price.toFixed(2)}
                     <span className={styles.planCardPeriodLabel}>/mes</span>
                   </div>
                   <p className={styles.planCardFeature}>

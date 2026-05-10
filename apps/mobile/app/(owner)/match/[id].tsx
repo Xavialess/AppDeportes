@@ -234,17 +234,8 @@ export default function OwnerMatchDetailScreen() {
 
               if (enrollmentsError) throw enrollmentsError;
 
-              // Increment cancellation_count on owner_profiles
-              const { data: ownerProf } = await supabase
-                .from('owner_profiles')
-                .select('cancellation_count')
-                .eq('user_id', userId)
-                .single();
-
-              await supabase
-                .from('owner_profiles')
-                .update({ cancellation_count: (ownerProf?.cancellation_count ?? 0) + 1 })
-                .eq('user_id', userId);
+              // cancellation_count is incremented atomically by the
+              // handle_match_owner_cancellation DB trigger — no manual update needed.
 
               setMatch((prev) => (prev ? { ...prev, status: 'cancelled' } : prev));
               setEnrollments((prev) =>

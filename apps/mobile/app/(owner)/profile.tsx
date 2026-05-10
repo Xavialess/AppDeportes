@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,8 @@ export default function OwnerProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
+  const hasFetched = useRef(false);
+
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -53,18 +55,15 @@ export default function OwnerProfileScreen() {
     if (!user) return;
     setError(null);
     try {
-      const { data: userData, error: userErr } = await supabase
-        .from('users')
-        .select('id, name, email')
-        .eq('id', user.id)
-        .single();
+      const [{ data: userData, error: userErr }, { data: ownerData }] = await Promise.all([
+        supabase.from('users').select('id, name, email').eq('id', user.id).single(),
+        supabase
+          .from('owner_profiles')
+          .select('cancellation_count, plan_id, plans(name)')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+      ]);
       if (userErr) throw userErr;
-
-      const { data: ownerData, error: ownerErr } = await supabase
-        .from('owner_profiles')
-        .select('cancellation_count, plan_id, plans(name)')
-        .eq('id', user.id)
-        .single();
 
       setProfile({
         id: userData.id,
@@ -87,7 +86,10 @@ export default function OwnerProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!sessionLoading) loadData();
+      if (!sessionLoading && !hasFetched.current) {
+        hasFetched.current = true;
+        loadData();
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionLoading, user?.id])
   );
@@ -136,8 +138,15 @@ export default function OwnerProfileScreen() {
 
   async function handleSignOut() {
     setSigningOut(true);
-    await supabase.auth.signOut();
-    router.replace('/');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.replace('/');
+    } catch {
+      // sign-out failed; leave spinner cleared so user can retry
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   if (loading || sessionLoading) {

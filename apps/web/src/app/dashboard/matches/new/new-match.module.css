@@ -31,7 +31,23 @@
 .emptyFieldsText {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
 }
+
+.emptyFieldsLink {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.emptyFieldsLink:hover { opacity: 0.88; text-decoration: none; }
 
 .header {
   margin-bottom: var(--space-8);

@@ -105,6 +105,9 @@ export default function NewMatchPage() {
         <p className={styles.emptyFieldsText}>
           Para publicar un partido debes tener al menos una cancha registrada.
         </p>
+        <a href="/dashboard/fields/new" className={styles.emptyFieldsLink}>
+          + Registrar cancha
+        </a>
       </div>
     );
   }

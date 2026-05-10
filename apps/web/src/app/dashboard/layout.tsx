@@ -40,6 +40,13 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect('/login?error=unauthorized');
   }
 
+  // Auto-create owner_profiles row if missing (handles accounts registered before this fix)
+  if (role === 'owner') {
+    await supabase
+      .from('owner_profiles')
+      .upsert({ user_id: user.id }, { onConflict: 'user_id', ignoreDuplicates: true });
+  }
+
   const displayName = profile?.name ?? user.email ?? 'Propietario';
   const initials = displayName
     .split(' ')

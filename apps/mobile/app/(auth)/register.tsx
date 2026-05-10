@@ -98,6 +98,17 @@ export default function RegisterScreen() {
         return;
       }
 
+      if (role === 'owner') {
+        const { error: profileError } = await supabase
+          .from('owner_profiles')
+          .insert({ user_id: authData.user.id });
+
+        if (profileError) {
+          setError('No se pudo crear el perfil de propietario. Intenta de nuevo.');
+          return;
+        }
+      }
+
       if (role === 'player') {
         router.replace('/(tabs)/');
       } else {

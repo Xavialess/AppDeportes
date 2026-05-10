@@ -69,16 +69,20 @@ export default async function MatchesPage() {
     .single();
 
   // Fetch owner's fields ids
-  const { data: fieldsData } = await supabase
+  const { data: fieldsData, error: fieldsError } = await supabase
     .from('fields')
     .select('id, name')
     .eq('owner_id', user.id);
+
+  if (fieldsError) {
+    console.error('[matches page] fields query error:', fieldsError);
+  }
 
   const fieldIds = (fieldsData ?? []).map((f) => f.id);
   const fieldMap = Object.fromEntries((fieldsData ?? []).map((f) => [f.id, f.name]));
 
   // Fetch matches for this owner with sport info
-  const { data: matchesRaw } = fieldIds.length > 0
+  const { data: matchesRaw, error: matchesError } = fieldIds.length > 0
     ? await supabase
         .from('matches')
         .select(`
@@ -91,7 +95,11 @@ export default async function MatchesPage() {
         .in('field_id', fieldIds)
         .order('date', { ascending: false })
         .order('start_time', { ascending: false })
-    : { data: [] };
+    : { data: [], error: null };
+
+  if (matchesError) {
+    console.error('[matches page] matches query error:', matchesError);
+  }
 
   // Count matches this month
   const now = new Date();
@@ -172,10 +180,15 @@ export default async function MatchesPage() {
           <div className={styles.emptyIcon} aria-hidden="true">⚽</div>
           <p className={styles.emptyTitle}>Sin partidos publicados</p>
           <p className={styles.emptyText}>
-            Aún no has publicado ningún partido. Crea tu primer partido para que
-            los jugadores puedan encontrarlo e inscribirse.
+            {fieldIds.length === 0
+              ? 'No se encontraron canchas asociadas a tu cuenta. Registra una cancha primero.'
+              : 'Aún no has publicado ningún partido. Crea tu primer partido para que los jugadores puedan encontrarlo e inscribirse.'}
           </p>
-          {!atLimit && (
+          {fieldIds.length === 0 ? (
+            <Link href="/dashboard/fields" className={styles.newMatchBtn}>
+              Ir a Mis canchas
+            </Link>
+          ) : !atLimit && (
             <Link href="/dashboard/matches/new" className={styles.newMatchBtn}>
               + Publicar primer partido
             </Link>

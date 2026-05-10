@@ -104,7 +104,7 @@ export default async function MatchesPage() {
   const maxMatches = plan?.max_matches_per_month ?? 0;
   const planName = plan?.name ?? 'Sin plan';
   const usagePercent = maxMatches > 0 ? Math.min(100, (matchesThisMonth / maxMatches) * 100) : 0;
-  const atLimit = matchesThisMonth >= maxMatches;
+  const atLimit = plan !== null && matchesThisMonth >= maxMatches;
 
   // Shape data for render
   const matches: MatchRow[] = (matchesRaw ?? []).map((m) => {

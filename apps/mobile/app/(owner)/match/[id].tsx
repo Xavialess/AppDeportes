@@ -22,6 +22,8 @@ interface MatchDetail {
   end_time: string;
   status: MatchStatus;
   type: 'open' | 'reservation';
+  is_visible: boolean;
+  owner_id: string;
   enrolled_count: number | null;
   max_players: number | null;
   min_players: number | null;
@@ -94,6 +96,8 @@ export default function OwnerMatchDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [updatingEnrollment, setUpdatingEnrollment] = useState<string | null>(null);
   const [completingMatch, setCompletingMatch] = useState(false);
+  const [cancellingMatch, setCancellingMatch] = useState(false);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -106,7 +110,7 @@ export default function OwnerMatchDetailScreen() {
       const [matchRes, enrollmentsRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('id, date, start_time, end_time, status, type, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)')
+          .select('id, date, start_time, end_time, status, type, is_visible, owner_id, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)')
           .eq('id', id)
           .single(),
         supabase
@@ -123,7 +127,7 @@ export default function OwnerMatchDetailScreen() {
       const matchWithCount = {
         ...(matchRes.data as Omit<MatchDetail, 'enrolled_count'>),
         enrolled_count: fetched.length,
-      } as MatchDetail;
+      } as unknown as MatchDetail;
 
       setMatch(matchWithCount);
       setEnrollments(fetched as Enrollment[]);
@@ -189,6 +193,99 @@ export default function OwnerMatchDetailScreen() {
     );
   }
 
+  async function handleCancelMatch() {
+    if (!match) return;
+
+    const activeEnrollments = enrollments.filter(
+      (e) => e.status === 'pending' || e.status === 'confirmed'
+    );
+    const playerCount = activeEnrollments.length;
+
+    Alert.alert(
+      '¿Cancelar este partido?',
+      `Hay ${playerCount} jugador${playerCount !== 1 ? 'es' : ''} inscrito${playerCount !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`,
+      [
+        { text: 'No, mantener', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            setCancellingMatch(true);
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const userId = sessionData?.session?.user?.id ?? match.owner_id;
+
+              const { error: matchError } = await supabase
+                .from('matches')
+                .update({
+                  status: 'cancelled',
+                  cancelled_by: userId,
+                  cancellation_reason: 'Cancelado por el propietario',
+                })
+                .eq('id', match.id);
+
+              if (matchError) throw matchError;
+
+              const { error: enrollmentsError } = await supabase
+                .from('enrollments')
+                .update({ status: 'cancelled' })
+                .eq('match_id', match.id)
+                .in('status', ['pending', 'confirmed']);
+
+              if (enrollmentsError) throw enrollmentsError;
+
+              // Increment cancellation_count on owner_profiles
+              const { data: ownerProf } = await supabase
+                .from('owner_profiles')
+                .select('cancellation_count')
+                .eq('user_id', userId)
+                .single();
+
+              await supabase
+                .from('owner_profiles')
+                .update({ cancellation_count: (ownerProf?.cancellation_count ?? 0) + 1 })
+                .eq('user_id', userId);
+
+              setMatch((prev) => (prev ? { ...prev, status: 'cancelled' } : prev));
+              setEnrollments((prev) =>
+                prev.map((e) =>
+                  e.status === 'pending' || e.status === 'confirmed'
+                    ? { ...e, status: 'cancelled' as EnrollmentStatus }
+                    : e
+                )
+              );
+            } catch {
+              Alert.alert('Error', 'No se pudo cancelar el partido. Intenta de nuevo.');
+            } finally {
+              setCancellingMatch(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleToggleVisibility() {
+    if (!match) return;
+
+    setTogglingVisibility(true);
+    const newVisibility = !match.is_visible;
+    try {
+      const { error: updateError } = await supabase
+        .from('matches')
+        .update({ is_visible: newVisibility })
+        .eq('id', match.id);
+
+      if (updateError) throw updateError;
+
+      setMatch((prev) => (prev ? { ...prev, is_visible: newVisibility } : prev));
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar la visibilidad. Intenta de nuevo.');
+    } finally {
+      setTogglingVisibility(false);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -211,6 +308,7 @@ export default function OwnerMatchDetailScreen() {
   const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
   const canMarkAttendance = match.status === 'confirmed' || match.status === 'completed';
   const canComplete = match.status === 'confirmed';
+  const canCancel = match.status === 'open' || match.status === 'confirmed';
   const enrolled = match.enrolled_count ?? enrollments.length;
   const max = match.max_players;
 
@@ -288,6 +386,45 @@ export default function OwnerMatchDetailScreen() {
             )}
           </TouchableOpacity>
         )}
+
+        {/* Actions section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Acciones</Text>
+        </View>
+
+        <View style={styles.actionsContainer}>
+          {/* Hide / show toggle — works for any match status */}
+          <TouchableOpacity
+            style={[styles.visibilityButton, togglingVisibility && styles.buttonDisabled]}
+            onPress={handleToggleVisibility}
+            disabled={togglingVisibility}
+            activeOpacity={0.8}
+          >
+            {togglingVisibility ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={styles.visibilityButtonText}>
+                {match.is_visible ? 'Ocultar del listado' : 'Mostrar en listado'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Cancel — only when status is open or confirmed */}
+          {canCancel && (
+            <TouchableOpacity
+              style={[styles.cancelButton, cancellingMatch && styles.buttonDisabled]}
+              onPress={handleCancelMatch}
+              disabled={cancellingMatch}
+              activeOpacity={0.8}
+            >
+              {cancellingMatch ? (
+                <ActivityIndicator color={colors.error} />
+              ) : (
+                <Text style={styles.cancelButtonText}>Cancelar partido</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Players section */}
         <View style={styles.sectionHeader}>
@@ -630,5 +767,35 @@ const styles = StyleSheet.create({
     color: colors.accentFg,
     fontWeight: '700',
     fontSize: 14,
+  },
+  actionsContainer: {
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  visibilityButton: {
+    backgroundColor: colors.card2,
+    borderRadius: radius.card,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  visibilityButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderRadius: radius.card,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.2)',
+  },
+  cancelButtonText: {
+    color: '#f87171',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

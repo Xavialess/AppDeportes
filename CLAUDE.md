@@ -154,6 +154,15 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
 
 ---
 
+## Mobile Dev Setup
+
+- **Metro config**: `apps/mobile/metro.config.js` is required for pnpm monorepo symlink resolution. Sets `watchFolders`, `nodeModulesPaths`, `unstable_enableSymlinks`, and an `extraNodeModules` proxy.
+- **`@babel/runtime`** must be a direct dependency of `@appdeportes/mobile` — pnpm won't hoist it automatically and Metro won't find it otherwise.
+- **Run mobile from the main repo**, not from a git worktree — Metro's relative path resolution breaks inside worktrees.
+- **Supabase email confirmation**: disabled in dev to avoid the free-tier rate limit (3 emails/hour). Re-enable before production.
+
+---
+
 ## Key Conventions
 
 - **Package naming**: `@appdeportes/<name>`
@@ -177,16 +186,13 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
 
 ## What's NOT Built Yet (V1 scope remaining)
 
-- Auth screens (mobile + web)
-- Match browsing and enrollment flows
 - Payment integration (provider TBD: Kushki or PayPhone)
-- Owner match posting form
-- Owner dashboard (match calendar, earnings, plan management)
 - Admin panel (full CRUD for reference data, user management, manual refunds)
-- Attendance marking
 - Push notifications
 - Player Pro subscription flow
 - Supabase Storage setup (field images, avatars)
+- Player upcoming matches screen (APPD-16)
+- Owner cancel/hide match on mobile (APPD-19)
 
 ---
 
@@ -219,3 +225,8 @@ Available gstack skills:
 |---|---|
 | 2026-05-09 | Initial scaffold: Turborepo monorepo, all packages, Expo Router mobile app, Next.js 14 web app, complete Supabase schema (5 migrations: schema + indexes + functions/triggers + RLS + seed), CLAUDE.md |
 | 2026-05-09 | Upgraded web app to Next.js 15 + React 19. Replaced `@supabase/auth-helpers-nextjs` with `@supabase/ssr`. Split Supabase client into `client.ts` / `server.ts` / `admin.ts`. Added session-refresh middleware. `next.config.ts` (TypeScript). Turbopack dev enabled. |
+| 2026-05-09 | APPD-24: `auto-confirm-matches` Edge Function (open matches hit min players before deadline → confirmed). `mark-attendance` Edge Function (owner marks players attended, triggers `increment_user_matches_played` RPC). Migration `20240101000006_attendance_rpc.sql`. |
+| 2026-05-09 | APPD-13/14/15: Mobile player screens — match listing with sport filter chips (batched enrollment counts, no N+1), match detail with adaptive enroll CTA, enrollment flow (in-person live, in-app stub with "Próximamente"). |
+| 2026-05-09 | APPD-17/18: Mobile owner screens — quick post form (carousel pickers, open/reservation toggle, success redirect), match detail with attendance toggle per player, "Completar partido" action. Fixed: `enrolled_count` is not a DB column — derived from enrollments join. |
+| 2026-05-09 | APPD-20/21: Web owner dashboard — NavLink with active-state, match list with plan usage bar, match detail + inline cancel Server Action, new match form with Server Action (validates, checks plan limit, verifies field ownership). |
+| 2026-05-09 | Fixed Metro + pnpm monorepo: added `metro.config.js` with `watchFolders`, `nodeModulesPaths`, `unstable_enableSymlinks`, `extraNodeModules` proxy. Added `@babel/runtime` as direct dep. Fixed `database.types.ts` (CLI banner was prepended/appended to file). Fixed `i18n` TS2742 with explicit return type + `compatibilityJSON: 'v3'`. |

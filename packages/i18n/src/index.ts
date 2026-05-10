@@ -15,6 +15,7 @@ export function createI18nInstance() {
     fallbackLng: 'es',
     defaultNS,
     resources,
+    compatibilityJSON: 'v3',
     interpolation: {
       escapeValue: false,
     },

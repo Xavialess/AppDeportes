@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router, Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { colors, radius, spacing } from '../../lib/theme';
 
 type UserRole = 'player' | 'owner' | 'admin';
 
@@ -96,7 +97,9 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>AppDeportes</Text>
+          <Text style={styles.brand}>
+            cancha<Text style={styles.brandDot}>.</Text>
+          </Text>
           <Text style={styles.subtitle}>Inicia sesión en tu cuenta</Text>
         </View>
 
@@ -110,10 +113,11 @@ export default function LoginScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Correo electrónico</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loading && styles.inputDisabled]}
               value={email}
               onChangeText={setEmail}
               placeholder="tu@correo.com"
+              placeholderTextColor={colors.dim}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -125,10 +129,11 @@ export default function LoginScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Contraseña</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loading && styles.inputDisabled]}
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
+              placeholderTextColor={colors.dim}
               secureTextEntry
               autoComplete="password"
               editable={!loading}
@@ -142,7 +147,7 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.accentFg} />
             ) : (
               <Text style={styles.buttonText}>Iniciar sesión</Text>
             )}
@@ -165,43 +170,46 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 48,
   },
   header: {
     marginBottom: 40,
     alignItems: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-    marginBottom: 8,
+  brand: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.8,
+    marginBottom: spacing.sm,
+  },
+  brandDot: {
+    color: colors.accent,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 15,
+    color: colors.mute,
     fontWeight: '400',
   },
   form: {
-    gap: 16,
+    gap: spacing.lg,
   },
   errorBox: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderColor: colors.errorBorder,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -209,47 +217,52 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.mute,
+    letterSpacing: 0.1,
   },
   input: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    fontSize: 16,
-    color: '#0f172a',
+    fontSize: 15,
+    color: colors.text,
+  },
+  inputDisabled: {
+    opacity: 0.5,
   },
   button: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: spacing.md,
   },
   footerText: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mute,
   },
   link: {
     fontSize: 14,
-    color: '#16a34a',
+    color: colors.accent,
     fontWeight: '600',
   },
 });

@@ -11,6 +11,7 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
+import { colors, radius, spacing } from '../../lib/theme';
 
 type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
 
@@ -34,21 +35,24 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
   cancelled: 'Cancelado',
 };
 
-const STATUS_COLORS: Record<MatchStatus, { bg: string; text: string }> = {
-  open: { bg: '#dcfce7', text: '#15803d' },
-  confirmed: { bg: '#dbeafe', text: '#1d4ed8' },
-  completed: { bg: '#f3f4f6', text: '#374151' },
-  cancelled: { bg: '#fee2e2', text: '#b91c1c' },
+const STATUS_STYLES: Record<MatchStatus, { bg: string; text: string }> = {
+  open: { bg: 'rgba(212,255,58,0.1)', text: colors.accent },
+  confirmed: { bg: 'rgba(96,165,250,0.1)', text: '#60a5fa' },
+  completed: { bg: 'rgba(255,255,255,0.06)', text: colors.mute },
+  cancelled: { bg: colors.errorBg, text: colors.error },
 };
 
-function formatDate(dateStr: string): string {
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function formatMatchDate(dateStr: string, timeStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return `${DAYS_ES[date.getDay()]} ${day} ${MONTHS_ES[month - 1]} · ${timeStr.slice(0, 5)}`;
 }
 
 function MatchCard({ match }: { match: Match }) {
-  const statusColor = STATUS_COLORS[match.status] ?? STATUS_COLORS.open;
+  const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
   const enrolled = match.enrolled_count ?? 0;
   const max = match.max_players;
 
@@ -65,11 +69,11 @@ function MatchCard({ match }: { match: Match }) {
             {match.format ? ` · ${match.format}` : ''}
           </Text>
           <Text style={styles.cardDate}>
-            {formatDate(match.date)} · {match.start_time}–{match.end_time}
+            {formatMatchDate(match.date, match.start_time)}
           </Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
-          <Text style={[styles.statusText, { color: statusColor.text }]}>
+        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+          <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {STATUS_LABELS[match.status]}
           </Text>
         </View>
@@ -81,18 +85,16 @@ function MatchCard({ match }: { match: Match }) {
             <View
               style={[
                 styles.enrollFill,
-                { width: `${Math.min((enrolled / max) * 100, 100)}%` },
+                { width: `${Math.min((enrolled / max) * 100, 100)}%` as any },
               ]}
             />
           </View>
-          <Text style={styles.enrollCount}>
-            {enrolled} / {max} jugadores
-          </Text>
+          <Text style={styles.enrollCount}>{enrolled} / {max}</Text>
         </View>
       )}
 
       {match.type === 'reservation' && (
-        <View style={styles.cardBottom}>
+        <View style={styles.cardBottomRow}>
           <Text style={styles.reservationLabel}>Reserva completa</Text>
         </View>
       )}
@@ -111,7 +113,6 @@ export default function OwnerHomeScreen() {
   async function loadMatches() {
     if (!user) return;
     try {
-      // Fetch fields owned by this user first
       const { data: fieldsData, error: fieldsError } = await supabase
         .from('fields')
         .select('id')
@@ -155,15 +156,13 @@ export default function OwnerHomeScreen() {
     } else if (!sessionLoading && !user) {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, sessionLoading]);
 
   useFocusEffect(
     useCallback(() => {
-      if (user) {
-        loadMatches();
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (user) loadMatches();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user])
   );
 
@@ -176,35 +175,13 @@ export default function OwnerHomeScreen() {
   if (loading || sessionLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
   return (
     <View style={styles.flex}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Panel del propietario</Text>
-          {user?.email ? (
-            <Text style={styles.subtitle}>{user.email}</Text>
-          ) : null}
-        </View>
-        <TouchableOpacity
-          style={styles.headerPostButton}
-          onPress={() => router.push('/(owner)/post-match')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.headerPostButtonText}>+ Partido</Text>
-        </TouchableOpacity>
-      </View>
-
-      {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
-
       <FlatList
         data={matches}
         keyExtractor={(item) => item.id}
@@ -217,21 +194,46 @@ export default function OwnerHomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#16a34a"
+            tintColor={colors.accent}
           />
         }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>⚽</Text>
-            <Text style={styles.emptyTitle}>Sin partidos todavía</Text>
-            <Text style={styles.emptyText}>
-              Publica tu primer partido tocando el botón "+" arriba a la derecha.
-            </Text>
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.headerTag}>Panel del propietario</Text>
+              <Text style={styles.headerTitle}>
+                cancha<Text style={styles.headerDot}>.</Text>
+              </Text>
+              {user?.email ? (
+                <Text style={styles.headerEmail}>{user.email}</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              style={styles.postButton}
+              onPress={() => router.push('/(owner)/post-match')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.postButtonText}>+ Partido</Text>
+            </TouchableOpacity>
           </View>
         }
+        ListEmptyComponent={
+          error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>Sin partidos todavía</Text>
+              <Text style={styles.emptyText}>
+                Publica tu primer partido tocando el botón "+ Partido" arriba.
+              </Text>
+            </View>
+          )
+        }
+        showsVerticalScrollIndicator={false}
       />
 
-      {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/(owner)/post-match')}
@@ -246,80 +248,71 @@ export default function OwnerHomeScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    paddingHorizontal: spacing.xl,
+    paddingTop: 64,
+    paddingBottom: spacing.lg,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.3,
+  headerTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.dim,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  headerPostButton: {
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  headerPostButtonText: {
-    color: '#ffffff',
+  headerTitle: {
+    fontSize: 30,
     fontWeight: '700',
-    fontSize: 14,
+    color: colors.text,
+    letterSpacing: -0.6,
   },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
-    marginHorizontal: 20,
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  headerDot: {
+    color: colors.accent,
   },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 14,
-    fontWeight: '500',
+  headerEmail: {
+    fontSize: 12,
+    color: colors.dim,
+    marginTop: 4,
+  },
+  postButton: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.badge,
+    marginTop: 36,
+  },
+  postButtonText: {
+    color: colors.accentFg,
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: -0.1,
   },
   listContent: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 100,
+    gap: spacing.md,
   },
   listEmpty: {
     flex: 1,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: radius.cardLg,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: colors.line,
   },
   cardTop: {
     flexDirection: 'row',
@@ -328,80 +321,101 @@ const styles = StyleSheet.create({
   },
   cardLeft: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   cardSport: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   cardDate: {
-    fontSize: 13,
-    color: '#64748b',
+    fontSize: 12,
+    color: colors.mute,
+    fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: radius.badge,
+    alignSelf: 'flex-start',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
   cardBottom: {
-    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  cardBottomRow: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
   },
   enrollBar: {
     flex: 1,
-    height: 6,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.card2,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
   enrollFill: {
-    height: 6,
-    backgroundColor: '#16a34a',
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
   },
   enrollCount: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
-    minWidth: 80,
+    color: colors.mute,
+    minWidth: 40,
     textAlign: 'right',
   },
   reservationLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.mute,
+    fontWeight: '500',
+  },
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderWidth: 1,
+    borderColor: colors.errorBorder,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 14,
     fontWeight: '500',
   },
   emptyState: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 32,
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    paddingTop: 60,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mute,
     textAlign: 'center',
-    lineHeight: 21,
+    lineHeight: 20,
   },
   fab: {
     position: 'absolute',
@@ -410,17 +424,17 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#16a34a',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
   },
   fabText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 28,
     fontWeight: '300',
     lineHeight: 32,

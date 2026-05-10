@@ -6,7 +6,7 @@
   justify-content: center;
   padding: var(--space-6);
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, oklch(28% 0.06 240 / 0.4), transparent),
+    radial-gradient(ellipse 60% 40% at 50% -5%, rgba(212, 255, 58, 0.06), transparent),
     var(--color-bg);
 }
 
@@ -18,40 +18,31 @@
   border-radius: var(--radius-lg);
   padding: var(--space-12) var(--space-8);
   box-shadow:
-    0 0 0 1px oklch(100% 0 0 / 0.04),
-    0 24px 48px oklch(0% 0 0 / 0.4);
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 48px rgba(0, 0, 0, 0.5);
 }
 
 /* ─── Brand mark ──────────────────────────────────────────────────────────── */
 .brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   margin-bottom: var(--space-8);
 }
 
-.brandIcon {
-  width: 36px;
-  height: 36px;
-  background: var(--color-accent);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: var(--text-lg);
+.brandName {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
   line-height: 1;
 }
 
-.brandName {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
+.brandDot {
+  color: var(--color-accent);
 }
 
 /* ─── Headings ────────────────────────────────────────────────────────────── */
 .heading {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -107,7 +98,7 @@
 
 .input:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px oklch(75% 0.18 65 / 0.15);
+  box-shadow: 0 0 0 3px rgba(212, 255, 58, 0.12);
 }
 
 .input:disabled {
@@ -133,18 +124,17 @@
   width: 100%;
   padding: var(--space-3) var(--space-4);
   background: var(--color-accent);
-  color: oklch(12% 0.02 65);
+  color: var(--color-accent-fg);
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
   font-size: var(--text-base);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   cursor: pointer;
   transition:
     opacity var(--duration-fast) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
-  position: relative;
-  overflow: hidden;
 }
 
 .submitButton:hover:not(:disabled) {

@@ -95,14 +95,14 @@
 }
 
 .typeBtn:hover {
-  border-color: oklch(40% 0.025 240);
+  border-color: var(--color-border-2);
   color: var(--color-text);
 }
 
 .typeBtnActive {
   border-color: var(--color-accent);
   color: var(--color-accent);
-  background: oklch(68% 0.21 250 / 0.06);
+  background: rgba(212, 255, 58, 0.05);
 }
 
 .formGrid {
@@ -211,11 +211,11 @@
   padding: var(--space-2) var(--space-8);
   background: var(--color-accent);
   border: none;
-  border-radius: var(--radius-sm);
-  color: #fff;
+  border-radius: var(--radius-md);
+  color: var(--color-accent-fg);
   font-size: var(--text-sm);
   font-weight: 700;
-  font-family: inherit;
+  font-family: var(--font-display);
   cursor: pointer;
   transition: opacity var(--duration-fast) var(--ease-out);
 }

@@ -10,6 +10,7 @@ import {
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
+import { colors, radius, spacing } from '../../lib/theme';
 
 // ---- types ---------------------------------------------------------------
 
@@ -81,7 +82,7 @@ function formatDeadlineDetail(deadlineStr: string | null): { label: string; expi
 
 function canEnroll(match: MatchDetail, isEnrolled: boolean): { allowed: boolean; reason: string | null } {
   if (match.status !== 'open') return { allowed: false, reason: 'Este partido ya no está disponible.' };
-  if (isEnrolled) return { allowed: false, reason: null }; // handled by UI badge
+  if (isEnrolled) return { allowed: false, reason: null };
   if (match.confirmation_deadline) {
     const deadline = new Date(match.confirmation_deadline);
     if (deadline <= new Date()) return { allowed: false, reason: 'El plazo de inscripción ha cerrado.' };
@@ -113,7 +114,6 @@ export default function MatchDetailScreen() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch match details
       const { data, error: matchErr } = await supabase
         .from('matches')
         .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sports(id, name, icon), fields(id, name, address, city_id)')
@@ -124,7 +124,6 @@ export default function MatchDetailScreen() {
 
       const raw = data as unknown as Omit<MatchDetail, 'enrolled_count'>;
 
-      // Enrollment count
       const { count: enrollCount, error: countErr } = await supabase
         .from('enrollments')
         .select('id', { count: 'exact', head: true })
@@ -136,7 +135,6 @@ export default function MatchDetailScreen() {
       const fullMatch: MatchDetail = { ...raw, enrolled_count: enrollCount ?? 0 };
       setMatch(fullMatch);
 
-      // Check if current user is enrolled
       if (user?.id) {
         const { data: enrollRow } = await supabase
           .from('enrollments')
@@ -157,8 +155,8 @@ export default function MatchDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Partido' }} />
-        <ActivityIndicator size="large" color="#16a34a" />
+        <Stack.Screen options={{ title: 'Partido', headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.text }} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -166,7 +164,7 @@ export default function MatchDetailScreen() {
   if (error || !match) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Partido' }} />
+        <Stack.Screen options={{ title: 'Partido', headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.text }} />
         <Text style={styles.errorText}>{error ?? 'Partido no encontrado.'}</Text>
         <TouchableOpacity onPress={loadMatch} style={styles.retryButton}>
           <Text style={styles.retryText}>Reintentar</Text>
@@ -176,7 +174,7 @@ export default function MatchDetailScreen() {
   }
 
   const sportLabel = match.sports
-    ? `${match.sports.name}${match.format ? ' ' + match.format : ''}`
+    ? `${match.sports.name}${match.format ? ' · ' + match.format : ''}`
     : match.format ?? 'Partido';
 
   const { label: deadlineLabel, expired: deadlineExpired } = formatDeadlineDetail(match.confirmation_deadline);
@@ -187,17 +185,23 @@ export default function MatchDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: sportLabel }} />
+      <Stack.Screen
+        options={{
+          title: sportLabel,
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.text,
+          headerShadowVisible: false,
+        }}
+      />
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header card */}
         <View style={styles.headerCard}>
           <Text style={styles.sportTitle}>{sportLabel}</Text>
-
           <View style={styles.statusRow}>
             {isCancelled ? (
               <View style={[styles.badge, styles.badgeCancelled]}>
@@ -217,36 +221,43 @@ export default function MatchDetailScreen() {
 
         {/* Info rows */}
         <View style={styles.infoCard}>
-          <InfoRow icon="📍" label="Cancha" value={match.fields?.name ?? '—'} />
+          <InfoRow label="CANCHA" value={match.fields?.name ?? '—'} />
           {match.fields?.address ? (
-            <InfoRow icon="" label="Dirección" value={match.fields.address} />
+            <InfoRow label="DIRECCIÓN" value={match.fields.address} />
           ) : null}
           <Divider />
-          <InfoRow icon="📅" label="Fecha" value={formatFullDate(match.date)} />
+          <InfoRow label="FECHA" value={formatFullDate(match.date)} />
           <InfoRow
-            icon="🕐"
-            label="Horario"
+            label="HORARIO"
             value={`${formatTime(match.start_time)} – ${formatTime(match.end_time)}`}
           />
           <Divider />
-          <InfoRow icon="💰" label="Precio por jugador" value={formatPrice(match.price_per_player)} highlight />
+          <InfoRow label="PRECIO POR JUGADOR" value={formatPrice(match.price_per_player)} highlight />
           <Divider />
           <InfoRow
-            icon="👥"
-            label="Jugadores inscritos"
+            label="JUGADORES"
             value={`${match.enrolled_count}${match.max_players != null ? ` / ${match.max_players}` : ''}`}
           />
+          {match.max_players != null && (
+            <View style={styles.progressTrackOuter}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.min(100, (match.enrolled_count / match.max_players) * 100)}%` as any },
+                ]}
+              />
+            </View>
+          )}
           {match.min_players != null ? (
             <View style={styles.minPlayersNote}>
               <Text style={styles.minPlayersText}>
-                Mínimo {match.min_players} jugadores · el partido se cancela si no se llega al mínimo
+                Mínimo {match.min_players} jugadores requeridos para que el partido se confirme
               </Text>
             </View>
           ) : null}
           <Divider />
           <InfoRow
-            icon="⏰"
-            label="Inscripción"
+            label="INSCRIPCIÓN"
             value={deadlineLabel}
             valueStyle={deadlineExpired ? styles.valueExpired : undefined}
           />
@@ -277,7 +288,9 @@ export default function MatchDetailScreen() {
             onPress={() => router.push(`/match/${id}/enroll` as any)}
             activeOpacity={0.8}
           >
-            <Text style={styles.ctaButtonText}>Inscribirme — {formatPrice(match.price_per_player)}</Text>
+            <Text style={styles.ctaButtonText}>
+              Inscribirme · {formatPrice(match.price_per_player)}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -288,62 +301,49 @@ export default function MatchDetailScreen() {
 // ---- sub-components -------------------------------------------------------
 
 interface InfoRowProps {
-  icon: string;
   label: string;
   value: string;
   highlight?: boolean;
   valueStyle?: object;
 }
 
-function InfoRow({ icon, label, value, highlight, valueStyle }: InfoRowProps) {
+function InfoRow({ label, value, highlight, valueStyle }: InfoRowProps) {
   return (
     <View style={infoRowStyles.row}>
-      <Text style={infoRowStyles.icon}>{icon}</Text>
-      <View style={infoRowStyles.content}>
-        <Text style={infoRowStyles.label}>{label}</Text>
-        <Text style={[infoRowStyles.value, highlight && infoRowStyles.valueHighlight, valueStyle]}>
-          {value}
-        </Text>
-      </View>
+      <Text style={infoRowStyles.label}>{label}</Text>
+      <Text style={[infoRowStyles.value, highlight && infoRowStyles.valueHighlight, valueStyle]}>
+        {value}
+      </Text>
     </View>
   );
 }
 
 function Divider() {
-  return <View style={{ height: 1, backgroundColor: '#f1f5f9', marginVertical: 4 }} />;
+  return <View style={{ height: 1, backgroundColor: colors.line, marginVertical: 2 }} />;
 }
 
 const infoRowStyles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     paddingVertical: 10,
-    gap: 12,
-  },
-  icon: {
-    fontSize: 18,
-    width: 24,
-    textAlign: 'center',
-    marginTop: 1,
-  },
-  content: {
-    flex: 1,
+    gap: 2,
   },
   label: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
-    marginBottom: 2,
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.dim,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   value: {
     fontSize: 15,
-    color: '#0f172a',
+    color: colors.text,
     fontWeight: '500',
   },
   valueHighlight: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.accent,
+    letterSpacing: -0.4,
   },
 });
 
@@ -352,142 +352,159 @@ const infoRowStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 24,
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing.xxl,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-    gap: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
   },
   headerCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 20,
+    backgroundColor: colors.card,
+    borderRadius: radius.cardLg,
+    padding: spacing.xl,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 12,
+    borderColor: colors.line,
+    gap: spacing.md,
   },
   sportTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.3,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
   },
   statusRow: {
     flexDirection: 'row',
   },
   badge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radius.badge,
     alignSelf: 'flex-start',
   },
   badgeOpen: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: 'rgba(212,255,58,0.1)',
   },
   badgeConfirmed: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: 'rgba(96,165,250,0.1)',
   },
   badgeCancelled: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.errorBg,
   },
   badgeText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   badgeTextOpen: {
-    color: '#16a34a',
+    color: colors.accent,
   },
   badgeTextConfirmed: {
-    color: '#1d4ed8',
+    color: '#60a5fa',
   },
   badgeTextCancelled: {
-    color: '#dc2626',
+    color: colors.error,
   },
   infoCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+    backgroundColor: colors.card,
+    borderRadius: radius.cardLg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.line,
+  },
+  progressTrackOuter: {
+    height: 4,
+    backgroundColor: colors.card2,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
   },
   minPlayersNote: {
-    backgroundColor: '#fef9c3',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 8,
+    backgroundColor: 'rgba(212,255,58,0.05)',
+    borderRadius: radius.badge,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(212,255,58,0.15)',
   },
   minPlayersText: {
     fontSize: 12,
-    color: '#854d0e',
+    color: colors.mute,
     lineHeight: 16,
   },
   valueExpired: {
-    color: '#dc2626',
+    color: colors.error,
   },
   bottomBar: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 12,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 34,
+    paddingTop: spacing.md,
+    backgroundColor: colors.bg2,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.line,
   },
   ctaButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 16,
     alignItems: 'center',
   },
   ctaDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: colors.card2,
   },
   ctaButtonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
   enrolledBadge: {
-    backgroundColor: '#dcfce7',
-    borderRadius: 12,
+    backgroundColor: 'rgba(212,255,58,0.1)',
+    borderRadius: radius.card,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#86efac',
+    borderColor: 'rgba(212,255,58,0.2)',
   },
   enrolledBadgeText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#16a34a',
+    color: colors.accent,
   },
   errorText: {
     fontSize: 15,
-    color: '#dc2626',
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.badge,
   },
   retryText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

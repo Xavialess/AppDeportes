@@ -1,19 +1,34 @@
-/* ─── Design tokens ─────────────────────────────────────────────────────── */
+/* ─── Design tokens — cancha. ──────────────────────────────────────────────── */
 :root {
-  /* Palette — dark navy + amber accent */
-  --color-bg:          oklch(14% 0.02 240);
-  --color-surface:     oklch(18% 0.025 240);
-  --color-surface-2:   oklch(22% 0.025 240);
-  --color-border:      oklch(30% 0.02 240);
-  --color-text:        oklch(92% 0.01 240);
-  --color-text-muted:  oklch(60% 0.015 240);
-  --color-accent:      oklch(75% 0.18 65);   /* amber */
-  --color-accent-dim:  oklch(65% 0.18 65);
-  --color-error:       oklch(60% 0.22 25);
-  --color-success:     oklch(68% 0.18 155);
+  /* Backgrounds */
+  --color-bg:           #0a0a0a;
+  --color-surface:      #171717;
+  --color-surface-2:    #1f1f1f;
+
+  /* Borders */
+  --color-border:       rgba(255, 255, 255, 0.07);
+  --color-border-2:     rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --color-text:         #fafafa;
+  --color-text-muted:   rgba(255, 255, 255, 0.55);
+  --color-text-dim:     rgba(255, 255, 255, 0.32);
+
+  /* Accent — electric lime */
+  --color-accent:       #d4ff3a;
+  --color-accent-fg:    #0a0a0a;
+  --color-accent-dim:   rgba(212, 255, 58, 0.55);
+
+  /* Semantic */
+  --color-error:        oklch(60% 0.22 25);
+  --color-success:      oklch(68% 0.18 155);
 
   /* Typography */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-display: "Space Grotesk", -apple-system, system-ui, sans-serif;
+  --font-mono:    "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-sans:    -apple-system, "SF Pro Text", system-ui, sans-serif;
+
+  /* Type scale */
   --text-xs:   0.75rem;
   --text-sm:   0.875rem;
   --text-base: 1rem;
@@ -27,15 +42,18 @@
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
+  --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-12: 3rem;
   --space-16: 4rem;
 
   /* Shape */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-badge: 6px;
+  --radius-sm:    6px;
+  --radius-md:    14px;
+  --radius-lg:    18px;
+  --radius-pill:  999px;
 
   /* Motion */
   --duration-fast:   120ms;

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import styles from '@/app/(dashboard)/dashboard.module.css';
 
 export const metadata: Metadata = {
-  title: 'Panel — AppDeportes',
+  title: 'Panel — cancha.',
 };
 
 export default async function DashboardPage() {
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
         <ul className={styles.summaryGrid} role="list">
           <li
             className={styles.summaryCard}
-            style={{ '--card-accent': 'oklch(68% 0.18 155)' } as CSSProperties}
+            style={{ '--card-accent': '#d4ff3a' } as CSSProperties}
           >
             <div className={styles.cardLabel}>Tus partidos</div>
             <div className={styles.cardValue}>—</div>
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
 
           <li
             className={styles.summaryCard}
-            style={{ '--card-accent': 'oklch(65% 0.18 250)' } as CSSProperties}
+            style={{ '--card-accent': '#60a5fa' } as CSSProperties}
           >
             <div className={styles.cardLabel}>Jugadores inscritos</div>
             <div className={styles.cardValue}>—</div>
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
 
           <li
             className={styles.summaryCard}
-            style={{ '--card-accent': 'oklch(75% 0.18 65)' } as CSSProperties}
+            style={{ '--card-accent': '#34d399' } as CSSProperties}
           >
             <div className={styles.cardLabel}>Canchas activas</div>
             <div className={styles.cardValue}>—</div>

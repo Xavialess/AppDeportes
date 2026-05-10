@@ -10,6 +10,7 @@ import {
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useSession';
+import { colors, radius, spacing } from '../../../lib/theme';
 
 // ---- types ---------------------------------------------------------------
 
@@ -112,7 +113,6 @@ export default function EnrollScreen() {
     if (!user?.id || !id) return;
     if (!matchSummary) return;
 
-    // Check if match is still available
     if (matchSummary.max_players != null && matchSummary.enrolled_count >= matchSummary.max_players) {
       setErrorMessage('Lo sentimos, el partido se ha llenado.');
       return;
@@ -131,7 +131,6 @@ export default function EnrollScreen() {
         });
 
       if (insertErr) {
-        // Duplicate key = already enrolled
         if (insertErr.code === '23505') {
           setErrorMessage('Ya estás inscrito en este partido.');
           setScreenState('select');
@@ -147,21 +146,26 @@ export default function EnrollScreen() {
     }
   }
 
-  // ---- render: loading
+  const stackOptions = {
+    title: 'Inscripción',
+    headerStyle: { backgroundColor: colors.bg },
+    headerTintColor: colors.text,
+    headerShadowVisible: false,
+  };
+
   if (screenState === 'loading') {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Inscripción' }} />
-        <ActivityIndicator size="large" color="#16a34a" />
+        <Stack.Screen options={stackOptions} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
-  // ---- render: error
   if (screenState === 'error' || !matchSummary) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Inscripción' }} />
+        <Stack.Screen options={stackOptions} />
         <Text style={styles.errorText}>{errorMessage ?? 'Algo salió mal.'}</Text>
         <TouchableOpacity onPress={loadMatchSummary} style={styles.retryButton}>
           <Text style={styles.retryText}>Reintentar</Text>
@@ -170,17 +174,16 @@ export default function EnrollScreen() {
     );
   }
 
-  // ---- render: success
   if (screenState === 'success') {
     return (
       <View style={styles.successContainer}>
-        <Stack.Screen options={{ title: 'Confirmación' }} />
+        <Stack.Screen options={{ ...stackOptions, title: 'Confirmación' }} />
         <View style={styles.successIcon}>
           <Text style={styles.successIconText}>✓</Text>
         </View>
         <Text style={styles.successTitle}>¡Inscripción confirmada!</Text>
         <Text style={styles.successSubtitle}>
-          Te has inscrito en el partido. Recuerda llevar el pago el día del partido.
+          Recuerda llevar el pago el día del partido.
         </Text>
 
         <View style={styles.successCard}>
@@ -203,14 +206,13 @@ export default function EnrollScreen() {
     );
   }
 
-  // ---- render: select / confirming
   const slotsLeft = matchSummary.max_players != null
     ? matchSummary.max_players - matchSummary.enrolled_count
     : null;
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Método de pago' }} />
+      <Stack.Screen options={{ ...stackOptions, title: 'Método de pago' }} />
 
       <ScrollView
         style={styles.scroll}
@@ -235,17 +237,14 @@ export default function EnrollScreen() {
           </View>
         </View>
 
-        {/* Error message */}
         {errorMessage ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorBoxText}>{errorMessage}</Text>
           </View>
         ) : null}
 
-        {/* Payment method selection */}
         <Text style={styles.sectionTitle}>¿Cómo quieres pagar?</Text>
 
-        {/* Option: In person */}
         <TouchableOpacity
           style={[styles.methodCard, selectedMethod === 'in_person' && styles.methodCardSelected]}
           onPress={() => setSelectedMethod('in_person')}
@@ -263,7 +262,6 @@ export default function EnrollScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Option: In app (coming soon) */}
         <View style={[styles.methodCard, styles.methodCardDisabled]}>
           <View style={styles.methodHeader}>
             <View style={styles.radio} />
@@ -279,7 +277,6 @@ export default function EnrollScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom CTA */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[
@@ -291,11 +288,11 @@ export default function EnrollScreen() {
           activeOpacity={0.8}
         >
           {screenState === 'confirming' ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.accentFg} />
           ) : (
             <Text style={styles.ctaButtonText}>
               {selectedMethod === 'in_person'
-                ? `Confirmar inscripción · ${formatPrice(matchSummary.price_per_player)}`
+                ? `Confirmar · ${formatPrice(matchSummary.price_per_player)}`
                 : 'Selecciona un método de pago'}
             </Text>
           )}
@@ -310,288 +307,283 @@ export default function EnrollScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 24,
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing.xxl,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-    gap: 16,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
-
-  // Summary card
   summaryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: radius.cardLg,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.line,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.dim,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   summarySport: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 2,
+    letterSpacing: -0.3,
   },
   summaryField: {
     fontSize: 14,
-    color: '#374151',
+    color: colors.mute,
     marginBottom: 2,
   },
   summaryDate: {
     fontSize: 13,
-    color: '#64748b',
-    marginBottom: 12,
+    color: colors.dim,
+    marginBottom: spacing.md,
   },
   summaryFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 12,
+    borderTopColor: colors.line,
+    paddingTop: spacing.md,
   },
   summaryPrice: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#16a34a',
+    fontWeight: '700',
+    color: colors.accent,
+    letterSpacing: -0.4,
   },
   summarySlots: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.mute,
     fontWeight: '500',
   },
-
-  // Section title
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
+    letterSpacing: -0.2,
   },
-
-  // Method cards
   methodCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    padding: spacing.lg,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
-    gap: 10,
+    borderColor: colors.line,
+    gap: spacing.sm,
   },
   methodCardSelected: {
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4',
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(212,255,58,0.04)',
   },
   methodCardDisabled: {
-    opacity: 0.6,
-    backgroundColor: '#f8f9fa',
+    opacity: 0.5,
   },
   methodHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
   },
   radio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.line2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: '#16a34a',
+    borderColor: colors.accent,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
   },
   methodEmoji: {
-    fontSize: 20,
+    fontSize: 18,
   },
   methodTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     flex: 1,
   },
   methodTitleDisabled: {
-    color: '#9ca3af',
+    color: colors.dim,
   },
   methodDescription: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.mute,
     lineHeight: 18,
     marginLeft: 30,
   },
   methodDescriptionDisabled: {
-    color: '#9ca3af',
+    color: colors.dim,
   },
   comingSoonBadge: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 8,
+    backgroundColor: colors.card2,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: radius.badge,
   },
   comingSoonText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#6b7280',
+    color: colors.dim,
   },
-
-  // Error
   errorBox: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
-    padding: 14,
+    borderColor: colors.errorBorder,
+    borderRadius: radius.card,
+    padding: spacing.lg,
   },
   errorBoxText: {
     fontSize: 14,
-    color: '#dc2626',
+    color: colors.error,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 15,
-    color: '#dc2626',
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.badge,
   },
   retryText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-
-  // Bottom bar
   bottomBar: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 12,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 34,
+    paddingTop: spacing.md,
+    backgroundColor: colors.bg2,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.line,
   },
   ctaButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 16,
     alignItems: 'center',
   },
   ctaDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: colors.card2,
   },
   ctaButtonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 15,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
-
-  // Success
   successContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    gap: 16,
+    gap: spacing.lg,
   },
   successIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#16a34a',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   successIconText: {
-    fontSize: 36,
-    color: '#ffffff',
+    fontSize: 32,
+    color: colors.accentFg,
     fontWeight: '800',
   },
   successTitle: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: '700',
+    color: colors.text,
     textAlign: 'center',
+    letterSpacing: -0.4,
   },
   successSubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mute,
     textAlign: 'center',
     lineHeight: 20,
   },
   successCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 20,
+    backgroundColor: colors.card,
+    borderRadius: radius.cardLg,
+    padding: spacing.xl,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.line,
     width: '100%',
     alignItems: 'center',
     gap: 4,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   successSport: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.2,
   },
   successField: {
     fontSize: 14,
-    color: '#374151',
+    color: colors.mute,
   },
   successDate: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.dim,
   },
   successPrice: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#16a34a',
-    marginTop: 8,
+    fontWeight: '700',
+    color: colors.accent,
+    marginTop: spacing.sm,
+    letterSpacing: -0.4,
   },
   homeButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 16,
     paddingHorizontal: 40,
     alignItems: 'center',
     width: '100%',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   homeButtonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
 });

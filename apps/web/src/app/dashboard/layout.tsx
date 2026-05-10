@@ -54,8 +54,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       <nav className={styles.sidebar} aria-label="Navegación principal">
         <div className={styles.sidebarTop}>
           <div className={styles.brandRow}>
-            <div className={styles.brandIcon} aria-hidden="true">⚽</div>
-            <span className={styles.brandName}>AppDeportes</span>
+            <span className={styles.brandName}>
+              cancha<span className={styles.brandDot}>.</span>
+            </span>
           </div>
         </div>
 

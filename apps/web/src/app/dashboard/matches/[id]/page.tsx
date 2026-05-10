@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import styles from '../matches.module.css';
 
-export const metadata: Metadata = { title: 'Detalle del partido — AppDeportes' };
+export const metadata: Metadata = { title: 'Detalle del partido — cancha.' };
 
 type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';

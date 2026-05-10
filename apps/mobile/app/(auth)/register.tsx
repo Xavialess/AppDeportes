@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router, Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { colors, radius, spacing } from '../../lib/theme';
 
 type UserRole = 'player' | 'owner';
 
@@ -119,8 +120,11 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
+          <Text style={styles.brand}>
+            cancha<Text style={styles.brandDot}>.</Text>
+          </Text>
           <Text style={styles.title}>Crear cuenta</Text>
-          <Text style={styles.subtitle}>Únete a AppDeportes</Text>
+          <Text style={styles.subtitle}>Únete a la comunidad deportiva</Text>
         </View>
 
         <View style={styles.form}>
@@ -133,10 +137,11 @@ export default function RegisterScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Nombre completo</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loading && styles.inputDisabled]}
               value={name}
               onChangeText={setName}
               placeholder="Juan Pérez"
+              placeholderTextColor={colors.dim}
               autoCapitalize="words"
               autoCorrect={false}
               autoComplete="name"
@@ -147,10 +152,11 @@ export default function RegisterScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Correo electrónico</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loading && styles.inputDisabled]}
               value={email}
               onChangeText={setEmail}
               placeholder="tu@correo.com"
+              placeholderTextColor={colors.dim}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -162,10 +168,11 @@ export default function RegisterScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Contraseña</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loading && styles.inputDisabled]}
               value={password}
               onChangeText={setPassword}
               placeholder="Mínimo 8 caracteres"
+              placeholderTextColor={colors.dim}
               secureTextEntry
               autoComplete="new-password"
               editable={!loading}
@@ -178,10 +185,11 @@ export default function RegisterScreen() {
               <Text style={styles.optional}>(opcional)</Text>
             </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loading && styles.inputDisabled]}
               value={phone}
               onChangeText={setPhone}
               placeholder="+593 99 999 9999"
+              placeholderTextColor={colors.dim}
               keyboardType="phone-pad"
               autoComplete="tel"
               editable={!loading}
@@ -223,7 +231,7 @@ export default function RegisterScreen() {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.accentFg} />
             ) : (
               <Text style={styles.buttonText}>Crear cuenta</Text>
             )}
@@ -246,43 +254,52 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 48,
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 36,
     alignItems: 'center',
   },
+  brand: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.6,
+    marginBottom: spacing.sm,
+  },
+  brandDot: {
+    color: colors.accent,
+  },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '400',
+    fontSize: 14,
+    color: colors.mute,
   },
   form: {
-    gap: 16,
+    gap: spacing.lg,
   },
   errorBox: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderColor: colors.errorBorder,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -290,23 +307,27 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.mute,
+    letterSpacing: 0.1,
   },
   optional: {
     fontWeight: '400',
-    color: '#9ca3af',
+    color: colors.dim,
   },
   input: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    fontSize: 16,
-    color: '#0f172a',
+    fontSize: 15,
+    color: colors.text,
+  },
+  inputDisabled: {
+    opacity: 0.5,
   },
   roleList: {
     gap: 10,
@@ -314,36 +335,36 @@ const styles = StyleSheet.create({
   roleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    gap: 12,
+    gap: spacing.md,
   },
   roleOptionSelected: {
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4',
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(212,255,58,0.05)',
   },
   radioCircle: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.line2,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   radioCircleSelected: {
-    borderColor: '#16a34a',
+    borderColor: colors.accent,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
   },
   roleTextContainer: {
     flex: 1,
@@ -351,43 +372,44 @@ const styles = StyleSheet.create({
   roleLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.mute,
   },
   roleLabelSelected: {
-    color: '#15803d',
+    color: colors.text,
   },
   roleDescription: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.dim,
     marginTop: 2,
   },
   button: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: spacing.md,
   },
   footerText: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mute,
   },
   link: {
     fontSize: 14,
-    color: '#16a34a',
+    color: colors.accent,
     fontWeight: '600',
   },
 });

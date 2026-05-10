@@ -13,6 +13,7 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
+import { colors, radius, spacing } from '../../lib/theme';
 
 type MatchType = 'open' | 'reservation';
 
@@ -61,7 +62,6 @@ export default function PostMatchScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [noFields, setNoFields] = useState(false);
 
-  // Form state
   const [matchType, setMatchType] = useState<MatchType>('open');
   const [fieldIndex, setFieldIndex] = useState(0);
   const [sportIndex, setSportIndex] = useState(0);
@@ -69,14 +69,10 @@ export default function PostMatchScreen() {
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-
-  // Open match extra fields
   const [pricePerPlayer, setPricePerPlayer] = useState('');
   const [minPlayers, setMinPlayers] = useState('');
   const [maxPlayers, setMaxPlayers] = useState('');
   const [confirmationDeadline, setConfirmationDeadline] = useState('');
-
-  // Reservation extra field
   const [totalPrice, setTotalPrice] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -101,9 +97,7 @@ export default function PostMatchScreen() {
         setFields(fetchedFields);
         setSports(fetchedSports);
 
-        if (fetchedFields.length === 0) {
-          setNoFields(true);
-        }
+        if (fetchedFields.length === 0) setNoFields(true);
       } catch {
         setError('No se pudieron cargar los datos. Intenta de nuevo.');
       } finally {
@@ -136,14 +130,11 @@ export default function PostMatchScreen() {
     if (!isValidTime(endTime)) return 'Hora de fin inválida. Usa HH:MM.';
     if (startTime >= endTime) return 'La hora de fin debe ser posterior a la de inicio.';
     if (!selectedSport) return 'Selecciona un deporte.';
-    if (availableFormats.length > 0 && !availableFormats[formatIndex]) {
-      return 'Selecciona un formato.';
-    }
+    if (availableFormats.length > 0 && !availableFormats[formatIndex]) return 'Selecciona un formato.';
 
     if (matchType === 'open') {
       if (!pricePerPlayer) return 'El precio por jugador es obligatorio.';
-      if (isNaN(Number(pricePerPlayer)) || Number(pricePerPlayer) < 0)
-        return 'Precio por jugador inválido.';
+      if (isNaN(Number(pricePerPlayer)) || Number(pricePerPlayer) < 0) return 'Precio por jugador inválido.';
       if (!minPlayers) return 'Los jugadores mínimos son obligatorios.';
       if (!maxPlayers) return 'Los jugadores máximos son obligatorios.';
       const min = parseInt(minPlayers, 10);
@@ -152,16 +143,13 @@ export default function PostMatchScreen() {
       if (isNaN(max) || max < 1) return 'Jugadores máximos inválidos.';
       if (min > max) return 'Los jugadores mínimos no pueden superar los máximos.';
       if (!confirmationDeadline) return 'El plazo de confirmación es obligatorio.';
-      if (!isValidDateTime(confirmationDeadline))
-        return 'Plazo de confirmación inválido. Usa AAAA-MM-DD HH:MM.';
-      if (!deadlineBeforeMatch(confirmationDeadline, date))
-        return 'El plazo de confirmación debe ser antes de la fecha del partido.';
+      if (!isValidDateTime(confirmationDeadline)) return 'Plazo inválido. Usa AAAA-MM-DD HH:MM.';
+      if (!deadlineBeforeMatch(confirmationDeadline, date)) return 'El plazo debe ser antes del partido.';
     }
 
     if (matchType === 'reservation') {
       if (!totalPrice) return 'El precio total es obligatorio.';
-      if (isNaN(Number(totalPrice)) || Number(totalPrice) < 0)
-        return 'Precio total inválido.';
+      if (isNaN(Number(totalPrice)) || Number(totalPrice) < 0) return 'Precio total inválido.';
     }
 
     return null;
@@ -170,16 +158,12 @@ export default function PostMatchScreen() {
   async function handleSubmit() {
     setError(null);
     const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    if (validationError) { setError(validationError); return; }
 
     setSubmitting(true);
     try {
       const selectedField = fields[fieldIndex];
-      const format =
-        availableFormats.length > 0 ? availableFormats[formatIndex] : null;
+      const format = availableFormats.length > 0 ? availableFormats[formatIndex] : null;
 
       const matchData: Record<string, unknown> = {
         field_id: selectedField.id,
@@ -203,13 +187,10 @@ export default function PostMatchScreen() {
       }
 
       const { error: insertError } = await supabase.from('matches').insert(matchData);
-
       if (insertError) throw insertError;
 
       setSuccess(true);
-      setTimeout(() => {
-        router.replace('/(owner)/');
-      }, 1500);
+      setTimeout(() => router.replace('/(owner)/'), 1500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al publicar el partido.';
       setError(msg);
@@ -221,7 +202,7 @@ export default function PostMatchScreen() {
   if (loadingData) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -229,7 +210,6 @@ export default function PostMatchScreen() {
   if (noFields) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.noFieldsIcon}>🏟️</Text>
         <Text style={styles.noFieldsTitle}>Sin canchas registradas</Text>
         <Text style={styles.noFieldsText}>
           Primero debes agregar una cancha antes de publicar un partido.
@@ -244,7 +224,9 @@ export default function PostMatchScreen() {
   if (success) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.successIcon}>✓</Text>
+        <View style={styles.successCircle}>
+          <Text style={styles.successCheck}>✓</Text>
+        </View>
         <Text style={styles.successTitle}>¡Partido publicado!</Text>
         <Text style={styles.successText}>Redirigiendo al panel…</Text>
       </View>
@@ -259,8 +241,8 @@ export default function PostMatchScreen() {
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backArrow}>
             <Text style={styles.backArrowText}>← Volver</Text>
@@ -274,48 +256,30 @@ export default function PostMatchScreen() {
           </View>
         ) : null}
 
-        {/* Tipo de partido */}
+        {/* Match type toggle */}
         <View style={styles.section}>
           <Text style={styles.label}>Tipo de partido</Text>
           <View style={styles.segmented}>
             <TouchableOpacity
-              style={[
-                styles.segment,
-                styles.segmentLeft,
-                matchType === 'open' && styles.segmentActive,
-              ]}
+              style={[styles.segment, styles.segmentLeft, matchType === 'open' && styles.segmentActive]}
               onPress={() => setMatchType('open')}
             >
-              <Text
-                style={[
-                  styles.segmentText,
-                  matchType === 'open' && styles.segmentTextActive,
-                ]}
-              >
+              <Text style={[styles.segmentText, matchType === 'open' && styles.segmentTextActive]}>
                 Abierto
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.segment,
-                styles.segmentRight,
-                matchType === 'reservation' && styles.segmentActive,
-              ]}
+              style={[styles.segment, styles.segmentRight, matchType === 'reservation' && styles.segmentActive]}
               onPress={() => setMatchType('reservation')}
             >
-              <Text
-                style={[
-                  styles.segmentText,
-                  matchType === 'reservation' && styles.segmentTextActive,
-                ]}
-              >
+              <Text style={[styles.segmentText, matchType === 'reservation' && styles.segmentTextActive]}>
                 Reserva
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Cancha */}
+        {/* Field picker */}
         <View style={styles.section}>
           <Text style={styles.label}>Cancha</Text>
           <View style={styles.pickerRow}>
@@ -324,36 +288,23 @@ export default function PostMatchScreen() {
               onPress={() => setFieldIndex((i) => Math.max(i - 1, 0))}
               disabled={fieldIndex === 0}
             >
-              <Text style={[styles.pickerArrowText, fieldIndex === 0 && styles.arrowDisabled]}>
-                ‹
-              </Text>
+              <Text style={[styles.pickerArrowText, fieldIndex === 0 && styles.arrowDisabled]}>‹</Text>
             </TouchableOpacity>
             <View style={styles.pickerValue}>
-              <Text style={styles.pickerValueText} numberOfLines={1}>
-                {fields[fieldIndex]?.name ?? '—'}
-              </Text>
-              <Text style={styles.pickerValueSub} numberOfLines={1}>
-                {fields[fieldIndex]?.address ?? ''}
-              </Text>
+              <Text style={styles.pickerValueText} numberOfLines={1}>{fields[fieldIndex]?.name ?? '—'}</Text>
+              <Text style={styles.pickerValueSub} numberOfLines={1}>{fields[fieldIndex]?.address ?? ''}</Text>
             </View>
             <TouchableOpacity
               style={styles.pickerArrow}
               onPress={() => setFieldIndex((i) => Math.min(i + 1, fields.length - 1))}
               disabled={fieldIndex === fields.length - 1}
             >
-              <Text
-                style={[
-                  styles.pickerArrowText,
-                  fieldIndex === fields.length - 1 && styles.arrowDisabled,
-                ]}
-              >
-                ›
-              </Text>
+              <Text style={[styles.pickerArrowText, fieldIndex === fields.length - 1 && styles.arrowDisabled]}>›</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Deporte */}
+        {/* Sport picker */}
         <View style={styles.section}>
           <Text style={styles.label}>Deporte</Text>
           <View style={styles.pickerRow}>
@@ -362,33 +313,22 @@ export default function PostMatchScreen() {
               onPress={() => handleSportChange('prev')}
               disabled={sportIndex === 0}
             >
-              <Text style={[styles.pickerArrowText, sportIndex === 0 && styles.arrowDisabled]}>
-                ‹
-              </Text>
+              <Text style={[styles.pickerArrowText, sportIndex === 0 && styles.arrowDisabled]}>‹</Text>
             </TouchableOpacity>
             <View style={styles.pickerValue}>
-              <Text style={styles.pickerValueText}>
-                {selectedSport?.name ?? '—'}
-              </Text>
+              <Text style={styles.pickerValueText}>{selectedSport?.name ?? '—'}</Text>
             </View>
             <TouchableOpacity
               style={styles.pickerArrow}
               onPress={() => handleSportChange('next')}
               disabled={sportIndex === sports.length - 1}
             >
-              <Text
-                style={[
-                  styles.pickerArrowText,
-                  sportIndex === sports.length - 1 && styles.arrowDisabled,
-                ]}
-              >
-                ›
-              </Text>
+              <Text style={[styles.pickerArrowText, sportIndex === sports.length - 1 && styles.arrowDisabled]}>›</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Formato */}
+        {/* Format picker */}
         {availableFormats.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.label}>Formato</Text>
@@ -398,38 +338,23 @@ export default function PostMatchScreen() {
                 onPress={() => setFormatIndex((i) => Math.max(i - 1, 0))}
                 disabled={formatIndex === 0}
               >
-                <Text
-                  style={[styles.pickerArrowText, formatIndex === 0 && styles.arrowDisabled]}
-                >
-                  ‹
-                </Text>
+                <Text style={[styles.pickerArrowText, formatIndex === 0 && styles.arrowDisabled]}>‹</Text>
               </TouchableOpacity>
               <View style={styles.pickerValue}>
-                <Text style={styles.pickerValueText}>
-                  {availableFormats[formatIndex] ?? '—'}
-                </Text>
+                <Text style={styles.pickerValueText}>{availableFormats[formatIndex] ?? '—'}</Text>
               </View>
               <TouchableOpacity
                 style={styles.pickerArrow}
-                onPress={() =>
-                  setFormatIndex((i) => Math.min(i + 1, availableFormats.length - 1))
-                }
+                onPress={() => setFormatIndex((i) => Math.min(i + 1, availableFormats.length - 1))}
                 disabled={formatIndex === availableFormats.length - 1}
               >
-                <Text
-                  style={[
-                    styles.pickerArrowText,
-                    formatIndex === availableFormats.length - 1 && styles.arrowDisabled,
-                  ]}
-                >
-                  ›
-                </Text>
+                <Text style={[styles.pickerArrowText, formatIndex === availableFormats.length - 1 && styles.arrowDisabled]}>›</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* Fecha */}
+        {/* Date / time */}
         <View style={styles.section}>
           <Text style={styles.label}>Fecha</Text>
           <TextInput
@@ -437,41 +362,43 @@ export default function PostMatchScreen() {
             value={date}
             onChangeText={setDate}
             placeholder="AAAA-MM-DD"
+            placeholderTextColor={colors.dim}
             keyboardType="numbers-and-punctuation"
             editable={!submitting}
             maxLength={10}
           />
         </View>
 
-        {/* Hora de inicio */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Hora de inicio</Text>
-          <TextInput
-            style={styles.input}
-            value={startTime}
-            onChangeText={setStartTime}
-            placeholder="HH:MM"
-            keyboardType="numbers-and-punctuation"
-            editable={!submitting}
-            maxLength={5}
-          />
+        <View style={styles.row2}>
+          <View style={[styles.section, styles.rowHalf]}>
+            <Text style={styles.label}>Inicio</Text>
+            <TextInput
+              style={styles.input}
+              value={startTime}
+              onChangeText={setStartTime}
+              placeholder="HH:MM"
+              placeholderTextColor={colors.dim}
+              keyboardType="numbers-and-punctuation"
+              editable={!submitting}
+              maxLength={5}
+            />
+          </View>
+          <View style={[styles.section, styles.rowHalf]}>
+            <Text style={styles.label}>Fin</Text>
+            <TextInput
+              style={styles.input}
+              value={endTime}
+              onChangeText={setEndTime}
+              placeholder="HH:MM"
+              placeholderTextColor={colors.dim}
+              keyboardType="numbers-and-punctuation"
+              editable={!submitting}
+              maxLength={5}
+            />
+          </View>
         </View>
 
-        {/* Hora de fin */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Hora de fin</Text>
-          <TextInput
-            style={styles.input}
-            value={endTime}
-            onChangeText={setEndTime}
-            placeholder="HH:MM"
-            keyboardType="numbers-and-punctuation"
-            editable={!submitting}
-            maxLength={5}
-          />
-        </View>
-
-        {/* Open match extra fields */}
+        {/* Open match fields */}
         {matchType === 'open' && (
           <>
             <View style={styles.section}>
@@ -485,6 +412,7 @@ export default function PostMatchScreen() {
                   value={pricePerPlayer}
                   onChangeText={setPricePerPlayer}
                   placeholder="0.00"
+                  placeholderTextColor={colors.dim}
                   keyboardType="decimal-pad"
                   editable={!submitting}
                 />
@@ -499,6 +427,7 @@ export default function PostMatchScreen() {
                   value={minPlayers}
                   onChangeText={setMinPlayers}
                   placeholder="6"
+                  placeholderTextColor={colors.dim}
                   keyboardType="number-pad"
                   editable={!submitting}
                   maxLength={3}
@@ -511,6 +440,7 @@ export default function PostMatchScreen() {
                   value={maxPlayers}
                   onChangeText={setMaxPlayers}
                   placeholder="10"
+                  placeholderTextColor={colors.dim}
                   keyboardType="number-pad"
                   editable={!submitting}
                   maxLength={3}
@@ -525,6 +455,7 @@ export default function PostMatchScreen() {
                 value={confirmationDeadline}
                 onChangeText={setConfirmationDeadline}
                 placeholder="AAAA-MM-DD HH:MM"
+                placeholderTextColor={colors.dim}
                 keyboardType="numbers-and-punctuation"
                 editable={!submitting}
                 maxLength={16}
@@ -534,7 +465,7 @@ export default function PostMatchScreen() {
           </>
         )}
 
-        {/* Reservation extra field */}
+        {/* Reservation field */}
         {matchType === 'reservation' && (
           <View style={styles.section}>
             <Text style={styles.label}>Precio total</Text>
@@ -547,6 +478,7 @@ export default function PostMatchScreen() {
                 value={totalPrice}
                 onChangeText={setTotalPrice}
                 placeholder="0.00"
+                placeholderTextColor={colors.dim}
                 keyboardType="decimal-pad"
                 editable={!submitting}
               />
@@ -561,13 +493,13 @@ export default function PostMatchScreen() {
           activeOpacity={0.8}
         >
           {submitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.accentFg} />
           ) : (
             <Text style={styles.submitButtonText}>Publicar partido</Text>
           )}
         </TouchableOpacity>
 
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -576,143 +508,143 @@ export default function PostMatchScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.bg,
     paddingHorizontal: 32,
   },
   container: {
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
     paddingTop: 56,
     paddingBottom: 40,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   backArrow: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   backArrowText: {
     fontSize: 15,
-    color: '#16a34a',
+    color: colors.accent,
     fontWeight: '600',
   },
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#0f172a',
+    color: colors.text,
     letterSpacing: -0.5,
   },
   errorBox: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
+    borderColor: colors.errorBorder,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '500',
   },
   section: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.dim,
     marginBottom: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    fontSize: 16,
-    color: '#0f172a',
+    fontSize: 15,
+    color: colors.text,
   },
   hint: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 4,
+    fontSize: 11,
+    color: colors.dim,
+    marginTop: 5,
   },
   segmented: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
+    borderColor: colors.line,
+    borderRadius: radius.card,
     overflow: 'hidden',
   },
   segment: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
   },
   segmentLeft: {
     borderRightWidth: 0.5,
-    borderRightColor: '#d1d5db',
+    borderRightColor: colors.line,
   },
   segmentRight: {
     borderLeftWidth: 0.5,
-    borderLeftColor: '#d1d5db',
+    borderLeftColor: colors.line,
   },
   segmentActive: {
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.accent,
   },
   segmentText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.mute,
   },
   segmentTextActive: {
-    color: '#ffffff',
+    color: colors.accentFg,
   },
   pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
+    borderColor: colors.line,
+    borderRadius: radius.card,
     overflow: 'hidden',
   },
   pickerArrow: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
   },
   pickerArrowText: {
     fontSize: 22,
-    color: '#16a34a',
+    color: colors.accent,
     fontWeight: '700',
   },
   arrowDisabled: {
-    color: '#d1d5db',
+    color: colors.line2,
   },
   pickerValue: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: spacing.sm,
   },
   pickerValueText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0f172a',
+    color: colors.text,
   },
   pickerValueSub: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.mute,
     marginTop: 2,
   },
   prefixInputRow: {
@@ -720,19 +652,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prefix: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.card2,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: colors.line,
     borderRightWidth: 0,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
+    borderTopLeftRadius: radius.card,
+    borderBottomLeftRadius: radius.card,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   prefixText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.mute,
   },
   inputWithPrefix: {
     flex: 1,
@@ -741,79 +673,76 @@ const styles = StyleSheet.create({
   },
   row2: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   rowHalf: {
     flex: 1,
   },
   submitButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 17,
     alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#ffffff',
-    fontSize: 17,
+    color: colors.accentFg,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  bottomSpacer: {
-    height: 24,
-  },
-  noFieldsIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    letterSpacing: -0.2,
   },
   noFieldsTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   noFieldsText: {
     fontSize: 15,
-    color: '#64748b',
+    color: colors.mute,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
   },
   backButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
+    backgroundColor: colors.accent,
+    borderRadius: radius.card,
     paddingVertical: 14,
     paddingHorizontal: 32,
   },
   backButtonText: {
-    color: '#ffffff',
+    color: colors.accentFg,
     fontWeight: '700',
     fontSize: 15,
   },
-  successIcon: {
-    fontSize: 56,
-    color: '#16a34a',
-    marginBottom: 16,
+  successCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  successCheck: {
+    fontSize: 36,
+    color: colors.accentFg,
+    fontWeight: '700',
   },
   successTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   successText: {
-    fontSize: 15,
-    color: '#64748b',
+    fontSize: 14,
+    color: colors.mute,
     textAlign: 'center',
   },
 });

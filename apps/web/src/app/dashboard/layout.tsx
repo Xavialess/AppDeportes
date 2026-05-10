@@ -1,0 +1,95 @@
+import type { ReactNode } from 'react';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { LogoutButton } from '@/app/(dashboard)/LogoutButton';
+import styles from '@/app/(dashboard)/dashboard.module.css';
+
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
+
+const NAV_ITEMS = [
+  { icon: '🏠', label: 'Inicio', href: '/dashboard', active: true },
+  { icon: '⚽', label: 'Mis partidos', href: '/dashboard/matches', active: false },
+  { icon: '🏟️', label: 'Canchas', href: '/dashboard/fields', active: false },
+  { icon: '👥', label: 'Jugadores', href: '/dashboard/players', active: false },
+  { icon: '📅', label: 'Calendario', href: '/dashboard/calendar', active: false },
+  { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', active: false },
+] as const;
+
+export default async function DashboardLayout({ children }: DashboardLayoutProps) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Fetch role from public.users (not user_metadata — unsafe)
+  const { data: profile } = await supabase
+    .from('users')
+    .select('name, role')
+    .eq('id', user.id)
+    .single();
+
+  const role = profile?.role;
+
+  if (role !== 'owner' && role !== 'admin') {
+    redirect('/login?error=unauthorized');
+  }
+
+  const displayName = profile?.name ?? user.email ?? 'Propietario';
+  const initials = displayName
+    .split(' ')
+    .slice(0, 2)
+    .map((part: string) => part[0] ?? '')
+    .join('')
+    .toUpperCase();
+
+  const roleLabel = role === 'admin' ? 'Administrador' : 'Propietario';
+
+  return (
+    <div className={styles.shell}>
+      <nav className={styles.sidebar} aria-label="Navegación principal">
+        <div className={styles.sidebarTop}>
+          <div className={styles.brandRow}>
+            <div className={styles.brandIcon} aria-hidden="true">⚽</div>
+            <span className={styles.brandName}>AppDeportes</span>
+          </div>
+        </div>
+
+        <ul className={styles.nav} role="list">
+          {NAV_ITEMS.map((item) => (
+            <li key={item.href}>
+              <span
+                className={`${styles.navItem} ${item.active ? styles.navItemActive : ''}`}
+                aria-current={item.active ? 'page' : undefined}
+              >
+                <span className={styles.navIcon} aria-hidden="true">{item.icon}</span>
+                {item.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className={styles.sidebarBottom}>
+          <div className={styles.userInfo}>
+            <div className={styles.avatar} aria-hidden="true">{initials}</div>
+            <div className={styles.userMeta}>
+              <div className={styles.userName}>{displayName}</div>
+              <div className={styles.userRole}>{roleLabel}</div>
+            </div>
+          </div>
+          <LogoutButton />
+        </div>
+      </nav>
+
+      <main className={styles.main}>
+        {children}
+      </main>
+    </div>
+  );
+}

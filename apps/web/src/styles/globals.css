@@ -1,0 +1,84 @@
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Palette — dark navy + amber accent */
+  --color-bg:          oklch(14% 0.02 240);
+  --color-surface:     oklch(18% 0.025 240);
+  --color-surface-2:   oklch(22% 0.025 240);
+  --color-border:      oklch(30% 0.02 240);
+  --color-text:        oklch(92% 0.01 240);
+  --color-text-muted:  oklch(60% 0.015 240);
+  --color-accent:      oklch(75% 0.18 65);   /* amber */
+  --color-accent-dim:  oklch(65% 0.18 65);
+  --color-error:       oklch(60% 0.22 25);
+  --color-success:     oklch(68% 0.18 155);
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  clamp(1.75rem, 2.5vw + 1rem, 2.25rem);
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Motion */
+  --duration-fast:   120ms;
+  --duration-normal: 240ms;
+  --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  line-height: 1.6;
+  font-size: var(--text-base);
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}

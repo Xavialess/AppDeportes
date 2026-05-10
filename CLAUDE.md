@@ -1,7 +1,7 @@
 # AppDeportes — Project Context for Claude Code
 
 > **Living document.** Update at the end of every session where something significant is built or decided.
-> Last updated: 2026-05-09 (Next.js 15 upgrade)
+> Last updated: 2026-05-09 (EAS iOS Podfile / RN alignment)
 
 ---
 
@@ -230,3 +230,4 @@ Available gstack skills:
 | 2026-05-09 | APPD-17/18: Mobile owner screens — quick post form (carousel pickers, open/reservation toggle, success redirect), match detail with attendance toggle per player, "Completar partido" action. Fixed: `enrolled_count` is not a DB column — derived from enrollments join. |
 | 2026-05-09 | APPD-20/21: Web owner dashboard — NavLink with active-state, match list with plan usage bar, match detail + inline cancel Server Action, new match form with Server Action (validates, checks plan limit, verifies field ownership). |
 | 2026-05-09 | Fixed Metro + pnpm monorepo: added `metro.config.js` with `watchFolders`, `nodeModulesPaths`, `unstable_enableSymlinks`, `extraNodeModules` proxy. Added `@babel/runtime` as direct dep. Fixed `database.types.ts` (CLI banner was prepended/appended to file). Fixed `i18n` TS2742 with explicit return type + `compatibilityJSON: 'v3'`. |
+| 2026-05-09 | EAS iOS: aligned `react-native` to **0.74.5** and `react-native-safe-area-context` to **4.10.5** (Expo SDK 51 `bundledNativeModules`). Prebuild was passing `privacy_file_aggregation_enabled` to `use_react_native!`, which **0.74.0** does not support — caused `unknown keyword: :privacy_file_aggregation_enabled` in `pod install`. |

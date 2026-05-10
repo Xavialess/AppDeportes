@@ -33,6 +33,13 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Common alias (e.g. Supabase docs / mistaken Site URL) — real route is /login
+  if (pathname === '/auth/sign-in' || pathname === '/auth/signin') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
+
   const isDashboard = pathname.startsWith('/dashboard');
   const isAdmin = pathname.startsWith('/admin');
   const isProtected = isDashboard || isAdmin;

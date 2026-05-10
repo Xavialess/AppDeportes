@@ -59,7 +59,7 @@ function MatchCard({ match }: { match: Match }) {
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/(owner)/match/${match.id}`)}
+      onPress={() => router.push(`/my-match/${match.id}` as any)}
       activeOpacity={0.75}
     >
       <View style={styles.cardTop}>

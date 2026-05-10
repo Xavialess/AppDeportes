@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -11,9 +11,11 @@ type UserRole = 'player' | 'owner' | 'admin';
 
 function SessionGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useSession();
+  const hasRouted = useRef(false);
 
   useEffect(() => {
     if (loading) return;
+    if (hasRouted.current) return;
 
     if (!session) {
       router.replace('/(auth)/login');
@@ -31,6 +33,7 @@ function SessionGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        hasRouted.current = true;
         const role = data.role as UserRole;
         if (role === 'player') {
           router.replace('/(tabs)/');

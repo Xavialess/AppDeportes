@@ -71,6 +71,16 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
               />
             </li>
           ))}
+          {role === 'admin' && (
+            <li>
+              <NavLink
+                href="/admin"
+                icon="🛡️"
+                label="Admin"
+                exact={false}
+              />
+            </li>
+          )}
         </ul>
 
         <div className={styles.sidebarBottom}>

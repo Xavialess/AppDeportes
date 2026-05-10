@@ -208,7 +208,7 @@ export default async function MatchesPage() {
                     <span
                       className={`${styles.badge} ${match.type === 'open' ? styles.badgeTypeOpen : styles.badgeTypeReservation}`}
                     >
-                      {match.type === 'open' ? 'Abierto' : 'Reserva'}
+                      {match.type === 'open' ? 'Individual' : 'Reserva completa'}
                     </span>
                     <span className={`${styles.badge} ${STATUS_CLASS[match.status]}`}>
                       {STATUS_LABELS[match.status]}

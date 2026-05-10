@@ -35,3 +35,4 @@ coverage
 # Supabase
 supabase/.branches
 supabase/.temp
+packages/supabase/.temp

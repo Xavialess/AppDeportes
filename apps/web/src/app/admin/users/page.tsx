@@ -8,11 +8,6 @@ export const metadata: Metadata = {
   title: 'Usuarios — Admin cancha.',
 };
 
-// NOTE: `is_suspended` column may not exist in the current schema.
-// If the column is absent, toggle actions are rendered but will be no-ops.
-// Add migration `ALTER TABLE public.users ADD COLUMN is_suspended BOOLEAN NOT NULL DEFAULT false;`
-// to enable full suspend functionality.
-
 async function toggleSuspend(formData: FormData) {
   'use server';
   const id = String(formData.get('id'));
@@ -35,7 +30,7 @@ export default async function UsersPage() {
   const admin = createAdminClient();
   const { data: users } = await admin
     .from('users')
-    .select('id, name, email, role, matches_played, is_pro')
+    .select('id, name, email, role, matches_played, is_pro, is_suspended')
     .order('name');
 
   return (
@@ -46,10 +41,6 @@ export default async function UsersPage() {
           <h1 className={styles.pageTitle}>Usuarios</h1>
         </div>
       </header>
-
-      <p style={{ marginBottom: 'var(--space-5)', color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)', fontStyle: 'italic' }}>
-        Nota: la funcionalidad de suspender requiere la columna <code>is_suspended</code> en la tabla <code>users</code>. Si no existe, agregar la migración correspondiente.
-      </p>
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
@@ -70,8 +61,7 @@ export default async function UsersPage() {
               </tr>
             )}
             {(users ?? []).map((u) => {
-              const userWithSuspend = u as typeof u & { is_suspended?: boolean };
-              const isSuspended = userWithSuspend.is_suspended ?? false;
+              const isSuspended = u.is_suspended ?? false;
               return (
                 <tr key={u.id}>
                   <td style={{ fontWeight: 600 }}>{u.name ?? '—'}</td>

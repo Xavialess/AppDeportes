@@ -8,19 +8,19 @@
       "distribution": "internal",
       "ios": {
         "simulator": false,
-        "image": "macos-sonoma-14.6-xcode-16.2"
+        "image": "macos-sonoma-14.6-xcode-16.1"
       }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
-        "image": "macos-sonoma-14.6-xcode-16.2"
+        "image": "macos-sonoma-14.6-xcode-16.1"
       }
     },
     "production": {
       "autoIncrement": true,
       "ios": {
-        "image": "macos-sonoma-14.6-xcode-16.2"
+        "image": "macos-sonoma-14.6-xcode-16.1"
       }
     }
   },

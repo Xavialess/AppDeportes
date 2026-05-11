@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -14,6 +13,7 @@ import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import { useSession } from '../../hooks/useSession';
 import { formatPrice } from '../../lib/format';
+import SkeletonCard from '../../components/SkeletonCard';
 
 // ---- types ---------------------------------------------------------------
 
@@ -220,8 +220,10 @@ export default function MyMatchesScreen() {
 
   if (loading || sessionLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ flex: 1, backgroundColor: '#0a0a0a', paddingTop: 80 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonCard key={i} index={i} />
+        ))}
       </View>
     );
   }
@@ -253,11 +255,14 @@ export default function MyMatchesScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           !error ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Sin inscripciones</Text>
-              <Text style={styles.emptySubtitle}>
-                Aún no te has inscrito en ningún partido. Explora los partidos disponibles en Inicio.
-              </Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <View style={styles.emptyIconOuter}>
+                  <View style={styles.emptyIconInner} />
+                </View>
+              </View>
+              <Text style={styles.emptyTitle}>Sin partidos inscritos</Text>
+              <Text style={styles.emptyText}>Explora el mapa y únete a un partido cerca de ti.</Text>
             </View>
           ) : null
         }
@@ -391,12 +396,44 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     alignItems: 'center',
   },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 12,
+    paddingTop: 60,
+  },
+  emptyIcon: {
+    marginBottom: 8,
+  },
+  emptyIconOuter: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIconInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(212, 255, 58, 0.3)',
+  },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '600',
+    color: '#ffffff',
     textAlign: 'center',
-    marginBottom: spacing.sm,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   emptySubtitle: {
     fontSize: 14,

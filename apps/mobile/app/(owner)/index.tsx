@@ -227,10 +227,13 @@ export default function OwnerHomeScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Sin partidos todavía</Text>
-              <Text style={styles.emptyText}>
-                Publica tu primer partido tocando el botón "+ Partido" arriba.
-              </Text>
+              <View style={styles.emptyIcon}>
+                <View style={styles.emptyIconOuter}>
+                  <View style={styles.emptyIconInner} />
+                </View>
+              </View>
+              <Text style={styles.emptyTitle}>Sin partidos publicados</Text>
+              <Text style={styles.emptyText}>Publica tu primer partido para empezar a recibir inscripciones.</Text>
             </View>
           )
         }
@@ -402,20 +405,41 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   emptyState: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 12,
     paddingTop: 60,
+  },
+  emptyIcon: {
+    marginBottom: 8,
+  },
+  emptyIconOuter: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIconInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(212, 255, 58, 0.3)',
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.sm,
+    fontWeight: '600',
+    color: '#ffffff',
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 14,
-    color: colors.mute,
+    color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
     lineHeight: 20,
   },

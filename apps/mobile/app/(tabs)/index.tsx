@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import { formatPrice } from '../../lib/format';
+import SkeletonCard from '../../components/SkeletonCard';
 
 // ---- types ---------------------------------------------------------------
 
@@ -286,8 +286,10 @@ export default function MatchListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ flex: 1, backgroundColor: '#0a0a0a', paddingTop: 80 }}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <SkeletonCard key={i} index={i} />
+        ))}
       </View>
     );
   }
@@ -310,10 +312,16 @@ export default function MatchListScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           !error ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Sin partidos disponibles</Text>
-              <Text style={styles.emptySubtitle}>
-                No hay partidos abiertos en este momento. Vuelve pronto.
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <View style={styles.pitchOuter}>
+                  <View style={styles.pitchCenter} />
+                  <View style={styles.pitchLine} />
+                </View>
+              </View>
+              <Text style={styles.emptyTitle}>No hay partidos cerca</Text>
+              <Text style={styles.emptyText}>
+                Prueba otro deporte o revisa más tarde.
               </Text>
             </View>
           ) : null
@@ -338,12 +346,6 @@ export default function MatchListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.bg,
   },
   list: {
@@ -510,21 +512,49 @@ const styles = StyleSheet.create({
     color: colors.mute,
     fontWeight: '600',
   },
-  empty: {
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 40,
     paddingTop: 60,
+    gap: 12,
+  },
+  emptyIcon: {
+    marginBottom: 8,
+  },
+  pitchOuter: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  pitchCenter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  pitchLine: {
+    position: 'absolute',
+    width: '100%',
+    height: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '600',
+    color: '#ffffff',
     textAlign: 'center',
-    marginBottom: spacing.sm,
   },
-  emptySubtitle: {
+  emptyText: {
     fontSize: 14,
-    color: colors.mute,
+    color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
     lineHeight: 20,
   },

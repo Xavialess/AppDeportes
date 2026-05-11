@@ -197,7 +197,9 @@ export default function MatchListScreen() {
         ) : null}
         <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardSport}>{sportLabel}</Text>
+          <View style={styles.sportPill}>
+            <Text style={styles.cardSport}>{sportLabel}</Text>
+          </View>
           {slotsLeft !== null && slotsLeft > 0 && (
             <View style={styles.slotsBadge}>
               <Text style={styles.slotsBadgeText}>{slotsLeft} CUPO{slotsLeft !== 1 ? 'S' : ''}</Text>
@@ -228,9 +230,11 @@ export default function MatchListScreen() {
                   ]}
                 />
               </View>
-              <Text style={styles.progressLabel}>
-                {item.enrolled_count}/{item.max_players}
-              </Text>
+              <View style={styles.playerPill}>
+                <Text style={styles.progressLabel}>
+                  {item.enrolled_count}/{item.max_players}
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -413,12 +417,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  sportPill: {
+    backgroundColor: 'rgba(212,255,58,0.08)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: spacing.sm,
+    flexShrink: 1,
+  },
   cardSport: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
-    flex: 1,
-    marginRight: spacing.sm,
+    color: colors.accent,
     letterSpacing: -0.2,
   },
   slotsBadge: {
@@ -466,7 +476,7 @@ const styles = StyleSheet.create({
   cardPrice: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.accent,
     letterSpacing: -0.4,
   },
   progressRow: {
@@ -488,6 +498,12 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.accent,
     borderRadius: radius.pill,
+  },
+  playerPill: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   progressLabel: {
     fontSize: 11,

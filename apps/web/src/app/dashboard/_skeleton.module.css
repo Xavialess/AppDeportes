@@ -1,0 +1,67 @@
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 25%,
+    var(--color-surface-2) 50%,
+    var(--color-surface) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.page {
+  padding: 0;
+}
+
+.header {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeletonTag {
+  composes: shimmer;
+  width: 80px;
+  height: 12px;
+}
+
+.skeletonTitle {
+  composes: shimmer;
+  width: 260px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.skeletonCard {
+  composes: shimmer;
+  height: 110px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+}
+
+.listGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeletonRow {
+  composes: shimmer;
+  height: 72px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+}

@@ -175,8 +175,9 @@ export default function MatchListScreen() {
   }, [selectedSportId]);
 
   function renderMatchCard({ item }: { item: Match }) {
+    const sportIcon = item.sports?.icon ?? null;
     const sportLabel = item.sports
-      ? `${item.sports.name}${item.format ? ' · ' + item.format : ''}`
+      ? `${sportIcon ? sportIcon + ' ' : ''}${item.sports.name}${item.format ? ' · ' + item.format : ''}`
       : item.format ?? '—';
     const dateLabel = formatMatchDate(item.date, item.start_time);
     const deadlineLabel = formatDeadline(item.confirmation_deadline);
@@ -275,7 +276,7 @@ export default function MatchListScreen() {
               onPress={() => setSelectedSportId(sport.id)}
             >
               <Text style={[styles.chipText, selectedSportId === sport.id && styles.chipTextActive]}>
-                {sport.name}
+                {sport.icon ? `${sport.icon} ${sport.name}` : sport.name}
               </Text>
             </TouchableOpacity>
           ))}

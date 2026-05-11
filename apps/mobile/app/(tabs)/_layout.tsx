@@ -1,5 +1,12 @@
 import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/theme';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+function tabIcon(focused: boolean, name: IoniconsName, outlineName: IoniconsName) {
+  return <Ionicons name={focused ? name : outlineName} size={22} color={focused ? colors.accent : colors.dim} />;
+}
 
 export default function TabsLayout() {
   return (
@@ -19,10 +26,34 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
-      <Tabs.Screen name="matches" options={{ title: 'Partidos' }} />
-      <Tabs.Screen name="my-matches" options={{ title: 'Mis partidos' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Perfil' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Inicio',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'compass', 'compass-outline'),
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: 'Partidos',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'football', 'football-outline'),
+        }}
+      />
+      <Tabs.Screen
+        name="my-matches"
+        options={{
+          title: 'Mis partidos',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'calendar', 'calendar-outline'),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'person', 'person-outline'),
+        }}
+      />
     </Tabs>
   );
 }

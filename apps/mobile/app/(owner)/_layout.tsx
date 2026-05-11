@@ -1,5 +1,12 @@
 import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/theme';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+function tabIcon(focused: boolean, name: IoniconsName, outlineName: IoniconsName) {
+  return <Ionicons name={focused ? name : outlineName} size={22} color={focused ? colors.accent : colors.dim} />;
+}
 
 const hiddenScreen = {
   href: null as null,
@@ -24,8 +31,20 @@ export default function OwnerLayout() {
         },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Partidos' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Perfil' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Partidos',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'grid', 'grid-outline'),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'person', 'person-outline'),
+        }}
+      />
       <Tabs.Screen name="post-match" options={hiddenScreen} />
       <Tabs.Screen name="match" options={hiddenScreen} />
     </Tabs>

@@ -167,7 +167,7 @@ export default async function FieldDetailPage({ params, searchParams }: PageProp
         )}
 
         {images.length < 10 && (
-          <form action={uploadImages} className={fieldStyles.uploadForm} encType="multipart/form-data">
+          <form action={uploadImages} className={fieldStyles.uploadForm}>
             <input type="hidden" name="field_id" value={field.id} />
             <label className={fieldStyles.uploadLabel} htmlFor="images">
               <span className={fieldStyles.uploadIcon}>+</span>

@@ -24,10 +24,13 @@ async function assignPlan(formData: FormData) {
   const owner_profile_id = formData.get('owner_profile_id');
   if (!owner_profile_id || typeof owner_profile_id !== 'string') return;
   const plan_id = formData.get('plan_id');
+  const resolved_plan_id = plan_id && typeof plan_id === 'string' && plan_id !== '' ? plan_id : null;
   const admin = createAdminClient();
   await admin
     .from('owner_profiles')
-    .update({ plan_id: plan_id && typeof plan_id === 'string' && plan_id !== '' ? plan_id : null })
+    .update(resolved_plan_id
+      ? { plan_id: resolved_plan_id }
+      : { plan_id: null, subscription_status: 'inactive' as const })
     .eq('id', owner_profile_id);
   redirect('/admin/owners');
 }
@@ -126,7 +129,6 @@ export default async function OwnersPage() {
             {(owners ?? []).map((o) => {
               const ownerRow = o as unknown as OwnerRow;
               const ownerUser = ownerRow.users;
-              const currentPlan = ownerRow.plans;
               const status = ownerRow.subscription_status ?? 'inactive';
 
               return (

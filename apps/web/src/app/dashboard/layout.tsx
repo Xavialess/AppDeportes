@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { LogoutButton } from '@/app/(dashboard)/LogoutButton';
 import { NavLink } from '@/app/dashboard/NavLink';
 import { MobileNav } from '@/app/dashboard/MobileNav';
+import '@/styles/shell.css';
 import styles from '@/app/(dashboard)/dashboard.module.css';
 
 interface DashboardLayoutProps {
@@ -64,11 +65,11 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   ];
 
   return (
-    <div className={styles.shell}>
-      <nav className={styles.sidebar} aria-label="Navegación principal">
-        <div className={styles.sidebarTop}>
-          <div className={styles.brandRow}>
-            <span className={styles.brandName}>
+    <div className="shell">
+      <nav className="sidebar" aria-label="Navegación principal">
+        <div className="sidebarTop">
+          <div className="brandRow">
+            <span className="brandName">
               cancha<span className={styles.brandDot}>.</span>
             </span>
           </div>
@@ -80,7 +81,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           />
         </div>
 
-        <ul className={styles.nav} role="list">
+        <ul className="nav" role="list">
           {NAV_ITEMS.map((item) => (
             <li key={item.href}>
               <NavLink
@@ -103,9 +104,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           )}
         </ul>
 
-        <div className={styles.sidebarBottom}>
+        <div className="sidebarBottom">
           <div className={styles.userInfo}>
-            <div className={styles.avatar} aria-hidden="true">{initials}</div>
+            <div className="avatar" aria-hidden="true">{initials}</div>
             <div className={styles.userMeta}>
               <div className={styles.userName}>{displayName}</div>
               <div className={styles.userRole}>{roleLabel}</div>
@@ -115,7 +116,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         </div>
       </nav>
 
-      <main className={styles.main}>
+      <main className="main">
         {children}
       </main>
     </div>

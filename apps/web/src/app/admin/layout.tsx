@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import '@/styles/shell.css';
 import styles from './admin.module.css';
 
 interface AdminLayoutProps {
@@ -47,24 +48,24 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   if (profile?.role !== 'admin') redirect('/login?error=unauthorized');
 
   return (
-    <div className={styles.shell}>
-      <aside className={styles.sidebar} aria-label="Admin navigation">
-        <div className={styles.sidebarTop}>
-          <div className={styles.brandRow}>
-            <span className={styles.brandName}>
+    <div className="shell">
+      <aside className="sidebar" aria-label="Admin navigation">
+        <div className="sidebarTop">
+          <div className="brandRow">
+            <span className="brandName">
               cancha<span className={styles.brandDot}>.</span>
             </span>
           </div>
           <div className={styles.adminBadge}>Admin</div>
         </div>
 
-        <nav className={styles.nav} aria-label="Admin sections">
+        <nav className="nav" aria-label="Admin sections">
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className={styles.navGroup}>
               <p className={styles.navGroupLabel}>{group.label}</p>
               {group.items.map((item) => (
-                <Link key={item.href} href={item.href} className={styles.navItem}>
-                  <span className={styles.navIcon} aria-hidden="true">
+                <Link key={item.href} href={item.href} className="navItem">
+                  <span className="navIcon" aria-hidden="true">
                     {item.icon}
                   </span>
                   {item.label}
@@ -75,20 +76,20 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 
           <div className={styles.navDivider} />
 
-          <Link href="/dashboard" className={styles.navItem}>
-            <span className={styles.navIcon} aria-hidden="true">←</span>
+          <Link href="/dashboard" className="navItem">
+            <span className="navIcon" aria-hidden="true">←</span>
             Dashboard
           </Link>
         </nav>
 
-        <div className={styles.sidebarBottom}>
+        <div className="sidebarBottom">
           <Link href="/dashboard" className={styles.backLink}>
             ← Salir del panel de admin
           </Link>
         </div>
       </aside>
 
-      <main className={styles.main}>{children}</main>
+      <main className="main">{children}</main>
     </div>
   );
 }

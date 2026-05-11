@@ -1,43 +1,5 @@
-/* ─── Admin shell ─────────────────────────────────────────────────────────── */
-.shell {
-  display: flex;
-  min-height: 100dvh;
-}
-
-/* ─── Sidebar ─────────────────────────────────────────────────────────────── */
-.sidebar {
-  width: 220px;
-  flex-shrink: 0;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  overflow-y: auto;
-}
-
-.sidebarTop {
-  padding: var(--space-6) var(--space-4) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.brandRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.brandName {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
-  line-height: 1;
-}
+/* ─── Admin-specific styles ───────────────────────────────────────────────── */
+/* Shell/sidebar/nav/main shared styles live in src/styles/shell.css          */
 
 .brandDot {
   color: var(--color-accent);
@@ -74,56 +36,10 @@
   opacity: 0.6;
 }
 
-.nav {
-  flex: 1;
-  padding: var(--space-2) var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-}
-
-.navItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  transition: background var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
-  text-decoration: none;
-}
-
-.navItem:hover {
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  text-decoration: none;
-}
-
-.navItemActive {
-  background: rgba(212, 255, 58, 0.08);
-  color: var(--color-accent);
-}
-
-.navIcon {
-  font-size: var(--text-base);
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
 .navDivider {
   height: 1px;
   background: var(--color-border);
   margin: var(--space-2) var(--space-3);
-}
-
-.sidebarBottom {
-  padding: var(--space-4);
-  border-top: 1px solid var(--color-border);
 }
 
 .backLink {
@@ -143,15 +59,6 @@
   color: var(--color-text);
   background: var(--color-surface-2);
   text-decoration: none;
-}
-
-/* ─── Main content ────────────────────────────────────────────────────────── */
-.main {
-  flex: 1;
-  margin-left: 220px;
-  padding: var(--space-8);
-  max-width: 1200px;
-  width: 100%;
 }
 
 /* ─── Page header ─────────────────────────────────────────────────────────── */
@@ -556,36 +463,5 @@
   margin-bottom: var(--space-4);
 }
 
-/* ─── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
-    padding: var(--space-3) var(--space-4);
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .sidebarTop {
-    padding: 0;
-    border-bottom: none;
-    flex: 1;
-  }
-
-  .nav,
-  .sidebarBottom {
-    display: none;
-  }
-
-  .shell {
-    flex-direction: column;
-  }
-
-  .main {
-    margin-left: 0;
-    padding: var(--space-6) var(--space-4);
-  }
-}
+/* ─── Responsive — admin-specific overrides ───────────────────────────────── */
+/* shared shell responsive (nav hidden, sidebarBottom collapsed) is in shell.css */

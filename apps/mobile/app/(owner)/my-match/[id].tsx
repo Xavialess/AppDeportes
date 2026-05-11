@@ -69,6 +69,13 @@ const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
   refunded: 'Reembolsado',
 };
 
+const ENROLLMENT_STATUS_COLORS: Record<EnrollmentStatus, { bg: string; text: string }> = {
+  pending: { bg: 'rgba(251,191,36,0.12)', text: '#fbbf24' },
+  confirmed: { bg: 'rgba(212,255,58,0.1)', text: '#d4ff3a' },
+  cancelled: { bg: 'rgba(239,68,68,0.1)', text: '#ef4444' },
+  refunded: { bg: 'rgba(255,255,255,0.06)', text: 'rgba(255,255,255,0.4)' },
+};
+
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -454,8 +461,8 @@ export default function OwnerMatchDetailScreen() {
                         {isPaid ? 'En app' : 'En persona'}
                       </Text>
                     </View>
-                    <View style={styles.enrollmentStatusBadge}>
-                      <Text style={styles.enrollmentStatusText}>
+                    <View style={[styles.enrollmentStatusBadge, { backgroundColor: ENROLLMENT_STATUS_COLORS[enrollment.status].bg }]}>
+                      <Text style={[styles.enrollmentStatusText, { color: ENROLLMENT_STATUS_COLORS[enrollment.status].text }]}>
                         {ENROLLMENT_STATUS_LABELS[enrollment.status]}
                       </Text>
                     </View>

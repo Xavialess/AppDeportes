@@ -164,6 +164,7 @@
   margin-left: 220px;
   padding: var(--space-8) var(--space-8);
   max-width: 1200px;
+  width: 100%;
 }
 
 /* ─── Dashboard page ─────────────────────────────────────────────────────── */

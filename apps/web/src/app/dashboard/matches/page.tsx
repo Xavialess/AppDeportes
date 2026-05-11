@@ -74,15 +74,13 @@ export default async function MatchesPage() {
     .select('id, name')
     .eq('owner_id', user.id);
 
-  if (fieldsError) {
-    console.error('[matches page] fields query error:', fieldsError);
-  }
+
 
   const fieldIds = (fieldsData ?? []).map((f) => f.id);
   const fieldMap = Object.fromEntries((fieldsData ?? []).map((f) => [f.id, f.name]));
 
   // Fetch matches for this owner with sport info
-  const { data: matchesRaw, error: matchesError } = fieldIds.length > 0
+  const { data: matchesRaw } = fieldIds.length > 0
     ? await supabase
         .from('matches')
         .select(`
@@ -97,9 +95,7 @@ export default async function MatchesPage() {
         .order('start_time', { ascending: false })
     : { data: [], error: null };
 
-  if (matchesError) {
-    console.error('[matches page] matches query error:', matchesError);
-  }
+
 
   // Count matches this month
   const now = new Date();
@@ -198,6 +194,7 @@ export default async function MatchesPage() {
         <ul className={styles.matchList} role="list">
           {matches.map((match) => (
             <li key={match.id} className={styles.matchCard}>
+              <Link href={`/dashboard/matches/${match.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
               <div className={styles.matchMain}>
                 <div className={styles.matchTopRow}>
                   <span className={styles.matchTitle}>
@@ -243,6 +240,7 @@ export default async function MatchesPage() {
                   )}
                 </div>
               </div>
+              </Link>
 
               <div className={styles.matchActions}>
                 <Link

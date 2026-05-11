@@ -339,13 +339,6 @@
 }
 
 /* ─── Enrollments table ──────────────────────────────────────────────────── */
-.sectionTitle {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: var(--space-4);
-}
-
 .tableWrapper {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -457,16 +450,6 @@
 }
 
 /* ─── Detail page ─────────────────────────────────────────────────────────── */
-.backLink {
-  display: inline-block;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  text-decoration: none;
-  margin-bottom: var(--space-2);
-  transition: color var(--duration-fast) var(--ease-out);
-}
-.backLink:hover { color: var(--color-text); }
-
 .detailGrid {
   margin-bottom: var(--space-6);
 }

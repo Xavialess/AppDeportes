@@ -19,6 +19,7 @@
     "@appdeportes/types": "workspace:*",
     "@appdeportes/utils": "workspace:*",
     "@babel/runtime": "^7.29.2",
+    "@expo/vector-icons": "~14.1.0",
     "@supabase/supabase-js": "^2.43.0",
     "expo": "~51.0.0",
     "expo-constants": "~16.0.0",

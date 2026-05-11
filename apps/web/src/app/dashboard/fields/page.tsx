@@ -28,6 +28,21 @@ export default async function FieldsPage() {
     .eq('owner_id', user.id)
     .order('name');
 
+  // Fetch active match counts per field
+  const fieldIds = (fields ?? []).map(f => f.id);
+  const { data: matchCounts } = fieldIds.length > 0
+    ? await supabase
+        .from('matches')
+        .select('field_id')
+        .in('field_id', fieldIds)
+        .in('status', ['open', 'confirmed'])
+    : { data: [] };
+
+  const countByField: Record<string, number> = {};
+  (matchCounts ?? []).forEach(m => {
+    countByField[m.field_id] = (countByField[m.field_id] ?? 0) + 1;
+  });
+
   return (
     <>
       <header className={styles.header}>
@@ -51,6 +66,11 @@ export default async function FieldsPage() {
                   <div className={styles.cardMeta}>
                     {field.address}
                     {city ? ` · ${city.name}` : ''}
+                  </div>
+                  <div className={styles.cardStats}>
+                    <span className={styles.statChip}>
+                      {countByField[field.id] ?? 0} partido{(countByField[field.id] ?? 0) !== 1 ? 's' : ''} activo{(countByField[field.id] ?? 0) !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </Link>
               </li>

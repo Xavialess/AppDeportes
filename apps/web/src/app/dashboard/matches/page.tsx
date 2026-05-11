@@ -171,9 +171,33 @@ export default async function MatchesPage() {
         </div>
       )}
 
+      {/* Upgrade nudge — show when at 80%+ of plan limit */}
+      {plan !== null && maxMatches > 0 && matchesThisMonth >= Math.floor(maxMatches * 0.8) && (
+        <div className={styles.upgradeBanner} role="alert">
+          <span className={styles.upgradeBannerText}>
+            {atLimit
+              ? `Alcanzaste el límite de tu plan ${planName}. Actualiza para seguir publicando.`
+              : `Casi sin partidos disponibles en tu plan ${planName}.`}
+          </span>
+          <a href="/dashboard/plan" className={styles.upgradeLink}>
+            Ver planes →
+          </a>
+        </div>
+      )}
+
       {matches.length === 0 ? (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon} aria-hidden="true">⚽</div>
+          <div className={styles.emptyIcon} aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3"/>
+              <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity="0.15"/>
+              <circle cx="24" cy="24" r="6" stroke="currentColor" strokeWidth="2"/>
+              <line x1="24" y1="4" x2="24" y2="18" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4"/>
+              <line x1="24" y1="30" x2="24" y2="44" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4"/>
+              <line x1="4" y1="24" x2="18" y2="24" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4"/>
+              <line x1="30" y1="24" x2="44" y2="24" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4"/>
+            </svg>
+          </div>
           <p className={styles.emptyTitle}>Sin partidos publicados</p>
           <p className={styles.emptyText}>
             {fieldIds.length === 0
@@ -198,7 +222,7 @@ export default async function MatchesPage() {
               <div className={styles.matchMain}>
                 <div className={styles.matchTopRow}>
                   <span className={styles.matchTitle}>
-                    {match.sport_name}
+                    <span className={styles.sportTag}>{match.sport_name}</span>
                     {match.format ? ` · ${match.format}` : ''}
                   </span>
                   <div className={styles.badgesRow}>

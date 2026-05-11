@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import styles from '../matches.module.css';
+import CancelButton from './CancelButton';
 
 export const metadata: Metadata = { title: 'Detalle del partido — cancha.' };
 
@@ -112,12 +113,7 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
           </h1>
         </div>
         {canCancel && (
-          <Link
-            href={`/dashboard/matches/${id}?cancel=1`}
-            className={`${styles.actionLink} ${styles.actionLinkDanger}`}
-          >
-            Cancelar partido
-          </Link>
+          <CancelButton matchId={id} />
         )}
       </header>
 

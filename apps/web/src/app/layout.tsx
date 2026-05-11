@@ -18,8 +18,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'cancha. — Panel de gestión',
-  description: 'Panel de propietarios y administración para cancha. Ecuador',
+  title: {
+    default: 'cancha.',
+    template: '%s — cancha.',
+  },
+  description: 'Encuentra y únete a partidos de fútbol y más deportes cerca de ti en Ecuador.',
+  keywords: ['fútbol', 'deportes', 'partidos', 'Ecuador', 'canchas', 'Quito', 'Guayaquil'],
+  authors: [{ name: 'cancha.' }],
+  creator: 'cancha.',
+  openGraph: {
+    type: 'website',
+    locale: 'es_EC',
+    url: 'https://cancha.ec',
+    siteName: 'cancha.',
+    title: 'cancha. — Encuentra partidos de deportes en Ecuador',
+    description: 'Encuentra y únete a partidos de fútbol y más deportes cerca de ti en Ecuador.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'cancha. — Deportes en Ecuador',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'cancha. — Encuentra partidos de deportes en Ecuador',
+    description: 'Encuentra y únete a partidos de fútbol y más deportes cerca de ti en Ecuador.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

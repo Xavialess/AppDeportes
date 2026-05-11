@@ -1,7 +1,7 @@
 # AppDeportes — Project Context for Claude Code
 
 > **Living document.** Update at the end of every session where something significant is built or decided.
-> Last updated: 2026-05-09 (EAS iOS Podfile / RN alignment)
+> Last updated: 2026-05-10 (admin panel, mobile bug fixes, route conflict fix)
 
 ---
 
@@ -181,18 +181,20 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
 - **migrations**: created with `supabase migration new <name>` — never invent filenames
 - **`matches_played`**: never increment manually — Edge Function only
 - **Role checks in RLS**: always use `public.is_admin()` / `public.is_owner_or_admin()` — never read from `user_metadata`
+- **Admin role assignment**: the `handle_new_user` trigger never assigns `admin` role — promote via SQL: `UPDATE public.users SET role = 'admin' WHERE email = '...'` using service role. No UI for this in V1.
+- **Mobile route groups and URL conflicts**: Expo Router strips group prefixes from URLs. `(owner)/match/[id]` and `match/[id]` both resolve to `/match/[id]` and will conflict. Owner match detail lives at `(owner)/my-match/[id]` → URL `/my-match/[id]` to avoid this. Never add a `match/` folder inside a route group if a top-level `match/` already exists.
+- **Mobile SessionGate**: `apps/mobile/app/_layout.tsx`. Uses a `hasRouted` ref so `router.replace()` only fires once on initial load — subsequent session token refreshes do NOT re-route the user. If you need to force re-routing after a role change, reset `hasRouted.current = false` before navigating.
 
 ---
 
 ## What's NOT Built Yet (V1 scope remaining)
 
 - Payment integration (provider TBD: Kushki or PayPhone)
-- Admin panel (full CRUD for reference data, user management, manual refunds)
+- Admin panel — mostly done; still missing:
+  - Manual refund tooling (refunds page is a stub)
 - Push notifications
 - Player Pro subscription flow
 - Supabase Storage setup (field images, avatars)
-- Player upcoming matches screen (APPD-16)
-- Owner cancel/hide match on mobile (APPD-19)
 
 ---
 
@@ -251,3 +253,8 @@ Key routing rules:
 | 2026-05-09 | APPD-20/21: Web owner dashboard — NavLink with active-state, match list with plan usage bar, match detail + inline cancel Server Action, new match form with Server Action (validates, checks plan limit, verifies field ownership). |
 | 2026-05-09 | Fixed Metro + pnpm monorepo: added `metro.config.js` with `watchFolders`, `nodeModulesPaths`, `unstable_enableSymlinks`, `extraNodeModules` proxy. Added `@babel/runtime` as direct dep. Fixed `database.types.ts` (CLI banner was prepended/appended to file). Fixed `i18n` TS2742 with explicit return type + `compatibilityJSON: 'v3'`. |
 | 2026-05-09 | EAS iOS: aligned `react-native` to **0.74.5** and `react-native-safe-area-context` to **4.10.5** (Expo SDK 51 `bundledNativeModules`). Prebuild was passing `privacy_file_aggregation_enabled` to `use_react_native!`, which **0.74.0** does not support — caused `unknown keyword: :privacy_file_aggregation_enabled` in `pod install`. |
+| 2026-05-10 | Admin panel built: `/admin/users` (list, suspend/reactivate) and `/admin/owners` (plan + subscription status). Fixed: `plans` table has `price` not `price_monthly`; `is_suspended` must be explicitly selected. Admin role assigned manually via SQL (trigger doesn't set it). |
+| 2026-05-10 | Fixed mobile owner match detail crash: `matches` table has no `owner_id` column — ownership is `matches.field_id → fields.owner_id`. Removed from select and interface. |
+| 2026-05-10 | Fixed mobile SessionGate re-routing: added `hasRouted` ref so `router.replace()` only fires once on initial load, not on every token refresh or session state change. |
+| 2026-05-10 | Fixed mobile route conflict: `(owner)/match/[id]` and `match/[id]` both resolved to `/match/[id]` in Expo Router, causing players to see owner UI. Renamed owner match detail to `(owner)/my-match/[id]` → URL `/my-match/[id]`. Updated owner index navigation accordingly. Owner cancel/hide match on mobile (APPD-19) was already implemented in the owner detail screen. |
+| 2026-05-10 | Admin plans CRUD (`/admin/plans`) and owner plan assignment (`/admin/owners` — dropdown + toggle). Fixed Server Actions to re-verify admin role independently (layout check alone doesn't gate POST endpoints). Fixed `toggleSubscription` to read DB state instead of trusting form field. Fixed `getSession()` → `getUser()` in mobile match cancel. |

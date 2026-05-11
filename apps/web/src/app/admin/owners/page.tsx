@@ -8,6 +8,67 @@ export const metadata: Metadata = {
   title: 'Propietarios — Admin cancha.',
 };
 
+async function requireAdmin() {
+  'use server';
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+  if (profile?.role !== 'admin') return null;
+  return user;
+}
+
+async function assignPlan(formData: FormData) {
+  'use server';
+  if (!await requireAdmin()) return;
+  const owner_profile_id = formData.get('owner_profile_id');
+  if (!owner_profile_id || typeof owner_profile_id !== 'string') return;
+  const plan_id = formData.get('plan_id');
+  const admin = createAdminClient();
+  await admin
+    .from('owner_profiles')
+    .update({ plan_id: plan_id && typeof plan_id === 'string' && plan_id !== '' ? plan_id : null })
+    .eq('id', owner_profile_id);
+  redirect('/admin/owners');
+}
+
+async function toggleSubscription(formData: FormData) {
+  'use server';
+  if (!await requireAdmin()) return;
+  const owner_profile_id = formData.get('owner_profile_id');
+  if (!owner_profile_id || typeof owner_profile_id !== 'string') return;
+  const admin = createAdminClient();
+  const { data: current } = await admin
+    .from('owner_profiles')
+    .select('subscription_status')
+    .eq('id', owner_profile_id)
+    .single();
+  if (!current) return;
+  const new_status = current.subscription_status === 'active' ? 'inactive' : 'active';
+  await admin
+    .from('owner_profiles')
+    .update({ subscription_status: new_status })
+    .eq('id', owner_profile_id);
+  redirect('/admin/owners');
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  max_matches_per_month: number;
+}
+
+interface OwnerRow {
+  id: string;
+  user_id: string;
+  subscription_status: string | null;
+  cancellation_count: number | null;
+  plan_id: string | null;
+  plans: Plan | null;
+  users: { name: string | null; email: string } | null;
+}
+
 export default async function OwnersPage() {
   const supabase = await createClient();
   const {
@@ -18,17 +79,22 @@ export default async function OwnersPage() {
   if (profile?.role !== 'admin') redirect('/login?error=unauthorized');
 
   const admin = createAdminClient();
-  const { data: owners } = await admin
-    .from('owner_profiles')
-    .select(`
-      id,
-      user_id,
-      subscription_status,
-      cancellation_count,
-      plans(name, price, max_matches_per_month),
-      users(name, email)
-    `)
-    .order('user_id');
+  const [{ data: owners }, { data: plans }] = await Promise.all([
+    admin
+      .from('owner_profiles')
+      .select('id, user_id, subscription_status, cancellation_count, plan_id, plans(id, name, price, max_matches_per_month), users(name, email)')
+      .order('user_id'),
+    admin.from('plans').select('id, name, price, max_matches_per_month').order('price'),
+  ]);
+
+  const plansList = (plans ?? []) as Plan[];
+
+  const statusBadgeClass = (status: string) =>
+    status === 'active'
+      ? styles.badgeActive
+      : status === 'cancelled'
+      ? styles.badgeCancelled
+      : styles.badgeInactive;
 
   return (
     <>
@@ -45,59 +111,85 @@ export default async function OwnersPage() {
             <tr>
               <th>Nombre</th>
               <th>Email</th>
-              <th>Plan</th>
-              <th>Estado suscripción</th>
+              <th>Plan asignado</th>
+              <th>Suscripción</th>
               <th>Cancelaciones</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {(owners ?? []).length === 0 && (
               <tr>
-                <td colSpan={5} className={styles.tableEmpty}>Sin propietarios registrados.</td>
+                <td colSpan={6} className={styles.tableEmpty}>Sin propietarios registrados.</td>
               </tr>
             )}
             {(owners ?? []).map((o) => {
-              const ownerUser = o.users as { name: string | null; email: string } | null;
-              const plan = o.plans as { name: string; price: number; max_matches_per_month: number } | null;
-              const status = o.subscription_status ?? 'inactive';
-
-              const statusBadgeClass =
-                status === 'active'
-                  ? styles.badgeActive
-                  : status === 'cancelled'
-                  ? styles.badgeCancelled
-                  : styles.badgeInactive;
+              const ownerRow = o as unknown as OwnerRow;
+              const ownerUser = ownerRow.users;
+              const currentPlan = ownerRow.plans;
+              const status = ownerRow.subscription_status ?? 'inactive';
 
               return (
-                <tr key={o.id}>
+                <tr key={ownerRow.id}>
                   <td style={{ fontWeight: 600 }}>{ownerUser?.name ?? '—'}</td>
                   <td style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>
                     {ownerUser?.email ?? '—'}
                   </td>
+
+                  {/* Plan assignment */}
                   <td>
-                    {plan ? (
-                      <span>
-                        <span style={{ fontWeight: 600 }}>{plan.name}</span>
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)', marginLeft: 6 }}>
-                          ${plan.price}/mes · {plan.max_matches_per_month} partidos
-                        </span>
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--color-text-muted)' }}>Sin plan</span>
-                    )}
+                    <form action={assignPlan} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="hidden" name="owner_profile_id" value={ownerRow.id} />
+                      <select
+                        name="plan_id"
+                        defaultValue={ownerRow.plan_id ?? ''}
+                        className={styles.formSelect}
+                        style={{ minWidth: 140 }}
+                      >
+                        <option value="">Sin plan</option>
+                        {plansList.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} · ${p.price}/mes
+                          </option>
+                        ))}
+                      </select>
+                      <button type="submit" className={styles.btnToggleOff}>
+                        Asignar
+                      </button>
+                    </form>
                   </td>
+
+                  {/* Subscription status */}
                   <td>
-                    <span className={`${styles.badge} ${statusBadgeClass}`}>{status}</span>
+                    <span className={`${styles.badge} ${statusBadgeClass(status)}`}>{status}</span>
                   </td>
+
+                  {/* Cancellation count */}
                   <td style={{ textAlign: 'center' }}>
                     <span
                       style={{
                         fontWeight: 700,
-                        color: (o.cancellation_count ?? 0) >= 3 ? 'var(--color-error)' : 'var(--color-text)',
+                        color: (ownerRow.cancellation_count ?? 0) >= 3 ? 'var(--color-error)' : 'var(--color-text)',
                       }}
                     >
-                      {o.cancellation_count ?? 0}
+                      {ownerRow.cancellation_count ?? 0}
                     </span>
+                  </td>
+
+                  {/* Toggle subscription */}
+                  <td>
+                    <form action={toggleSubscription}>
+                      <input type="hidden" name="owner_profile_id" value={ownerRow.id} />
+                      <input type="hidden" name="current_status" value={status} />
+                      <button
+                        type="submit"
+                        className={status === 'active' ? styles.btnToggleOn : styles.btnToggleOff}
+                        disabled={!ownerRow.plan_id}
+                        title={!ownerRow.plan_id ? 'Asigna un plan primero' : undefined}
+                      >
+                        {status === 'active' ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </form>
                   </td>
                 </tr>
               );

@@ -211,8 +211,8 @@ export default function OwnerMatchDetailScreen() {
           onPress: async () => {
             setCancellingMatch(true);
             try {
-              const { data: sessionData } = await supabase.auth.getSession();
-              const userId = sessionData?.session?.user?.id ?? null;
+              const { data: { user: currentUser } } = await supabase.auth.getUser();
+              const userId = currentUser?.id ?? null;
 
               const { error: matchError } = await supabase
                 .from('matches')

@@ -16,6 +16,7 @@ const NAV_GROUPS = [
       { href: '/admin/cities', icon: '🏙️', label: 'Ciudades' },
       { href: '/admin/sports', icon: '⚽', label: 'Deportes' },
       { href: '/admin/city-sports', icon: '🔗', label: 'Ciudad–Deporte' },
+      { href: '/admin/plans', icon: '📦', label: 'Planes' },
     ],
   },
   {

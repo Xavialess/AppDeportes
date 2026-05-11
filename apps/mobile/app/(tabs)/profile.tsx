@@ -19,7 +19,7 @@ interface UserProfile {
   id: string;
   name: string | null;
   email: string | null;
-  avatar_url: string | null;
+  avatar: string | null;
   matches_played: number;
   is_pro: boolean;
   role: string;
@@ -57,7 +57,7 @@ export default function ProfileScreen() {
     try {
       const { data, error: err } = await supabase
         .from('users')
-        .select('id, name, email, avatar_url, matches_played, is_pro, role')
+        .select('id, name, email, avatar, matches_played, is_pro, role')
         .eq('id', user.id)
         .single();
 

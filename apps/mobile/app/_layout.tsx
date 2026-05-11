@@ -59,7 +59,13 @@ export default function RootLayout() {
     <I18nextProvider i18n={i18n}>
       <StatusBar style="light" />
       <SessionGate>
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 220,
+          }}
+        />
       </SessionGate>
     </I18nextProvider>
   );

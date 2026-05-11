@@ -10,12 +10,17 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
 import { colors, radius, spacing } from '../../lib/theme';
 
+const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
 type MatchType = 'open' | 'reservation';
+type ActivePicker = 'date' | 'startTime' | 'endTime' | 'deadlineDate' | 'deadlineTime' | null;
 
 interface Field {
   id: string;
@@ -29,18 +34,21 @@ interface Sport {
   formats: string[];
 }
 
-function isValidDate(str: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
-  const d = new Date(str);
-  return !isNaN(d.getTime());
+function formatDateDisplay(d: Date): string {
+  return `${DAYS_ES[d.getDay()]}, ${d.getDate()} ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function isValidTime(str: string): boolean {
-  return /^\d{2}:\d{2}$/.test(str);
+function formatTimeDisplay(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
-function isValidDateTime(str: string): boolean {
-  return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(str);
+function dateToString(d: Date): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function isFutureDate(dateStr: string): boolean {
@@ -66,13 +74,26 @@ export default function PostMatchScreen() {
   const [fieldIndex, setFieldIndex] = useState(0);
   const [sportIndex, setSportIndex] = useState(0);
   const [formatIndex, setFormatIndex] = useState(0);
+
+  // Date/time as strings (used for submission / validation)
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [confirmationDeadline, setConfirmationDeadline] = useState('');
+
+  // Date/time as Date objects (used by pickers)
+  const [dateObj, setDateObj] = useState<Date | null>(null);
+  const [startTimeObj, setStartTimeObj] = useState<Date | null>(null);
+  const [endTimeObj, setEndTimeObj] = useState<Date | null>(null);
+  const [deadlineDateObj, setDeadlineDateObj] = useState<Date | null>(null);
+  const [deadlineTimeObj, setDeadlineTimeObj] = useState<Date | null>(null);
+
+  // Which picker is currently open
+  const [activePicker, setActivePicker] = useState<ActivePicker>(null);
+
   const [pricePerPlayer, setPricePerPlayer] = useState('');
   const [minPlayers, setMinPlayers] = useState('');
   const [maxPlayers, setMaxPlayers] = useState('');
-  const [confirmationDeadline, setConfirmationDeadline] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -119,15 +140,60 @@ export default function PostMatchScreen() {
     setFormatIndex(0);
   }
 
+  function buildDeadlineString(dDate: Date | null, dTime: Date | null): string {
+    if (!dDate || !dTime) return '';
+    const dateStr = dateToString(dDate);
+    const timeStr = formatTimeDisplay(dTime);
+    return `${dateStr} ${timeStr}`;
+  }
+
+  function handlePickerChange(picker: ActivePicker, event: DateTimePickerEvent, selected?: Date) {
+    if (event.type === 'dismissed') {
+      setActivePicker(null);
+      return;
+    }
+
+    if (!selected) return;
+
+    if (Platform.OS === 'android') {
+      setActivePicker(null);
+    }
+
+    switch (picker) {
+      case 'date': {
+        setDateObj(selected);
+        setDate(dateToString(selected));
+        break;
+      }
+      case 'startTime': {
+        setStartTimeObj(selected);
+        setStartTime(formatTimeDisplay(selected));
+        break;
+      }
+      case 'endTime': {
+        setEndTimeObj(selected);
+        setEndTime(formatTimeDisplay(selected));
+        break;
+      }
+      case 'deadlineDate': {
+        setDeadlineDateObj(selected);
+        setConfirmationDeadline(buildDeadlineString(selected, deadlineTimeObj));
+        break;
+      }
+      case 'deadlineTime': {
+        setDeadlineTimeObj(selected);
+        setConfirmationDeadline(buildDeadlineString(deadlineDateObj, selected));
+        break;
+      }
+    }
+  }
+
   function validate(): string | null {
     if (fields.length === 0) return 'No tienes canchas registradas.';
     if (!date) return 'La fecha es obligatoria.';
-    if (!isValidDate(date)) return 'Fecha inválida. Usa el formato AAAA-MM-DD.';
     if (!isFutureDate(date)) return 'La fecha debe ser en el futuro.';
     if (!startTime) return 'La hora de inicio es obligatoria.';
-    if (!isValidTime(startTime)) return 'Hora de inicio inválida. Usa HH:MM.';
     if (!endTime) return 'La hora de fin es obligatoria.';
-    if (!isValidTime(endTime)) return 'Hora de fin inválida. Usa HH:MM.';
     if (startTime >= endTime) return 'La hora de fin debe ser posterior a la de inicio.';
     if (!selectedSport) return 'Selecciona un deporte.';
     if (availableFormats.length > 0 && !availableFormats[formatIndex]) return 'Selecciona un formato.';
@@ -143,7 +209,6 @@ export default function PostMatchScreen() {
       if (isNaN(max) || max < 1) return 'Jugadores máximos inválidos.';
       if (min > max) return 'Los jugadores mínimos no pueden superar los máximos.';
       if (!confirmationDeadline) return 'El plazo de confirmación es obligatorio.';
-      if (!isValidDateTime(confirmationDeadline)) return 'Plazo inválido. Usa AAAA-MM-DD HH:MM.';
       if (!deadlineBeforeMatch(confirmationDeadline, date)) return 'El plazo debe ser antes del partido.';
     }
 
@@ -354,47 +419,75 @@ export default function PostMatchScreen() {
           </View>
         )}
 
-        {/* Date / time */}
+        {/* Date */}
         <View style={styles.section}>
           <Text style={styles.label}>Fecha</Text>
-          <TextInput
+          <TouchableOpacity
             style={styles.input}
-            value={date}
-            onChangeText={setDate}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor={colors.dim}
-            keyboardType="numbers-and-punctuation"
-            editable={!submitting}
-            maxLength={10}
-          />
+            onPress={() => setActivePicker(activePicker === 'date' ? null : 'date')}
+            disabled={submitting}
+            activeOpacity={0.7}
+          >
+            <Text style={dateObj ? styles.inputValueText : styles.inputPlaceholderText}>
+              {dateObj ? formatDateDisplay(dateObj) : 'Selecciona una fecha'}
+            </Text>
+          </TouchableOpacity>
+          {activePicker === 'date' && (
+            <DateTimePicker
+              value={dateObj ?? new Date()}
+              mode="date"
+              minimumDate={new Date()}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={(event, selected) => handlePickerChange('date', event, selected)}
+            />
+          )}
         </View>
 
+        {/* Start / end time */}
         <View style={styles.row2}>
           <View style={[styles.section, styles.rowHalf]}>
             <Text style={styles.label}>Inicio</Text>
-            <TextInput
+            <TouchableOpacity
               style={styles.input}
-              value={startTime}
-              onChangeText={setStartTime}
-              placeholder="HH:MM"
-              placeholderTextColor={colors.dim}
-              keyboardType="numbers-and-punctuation"
-              editable={!submitting}
-              maxLength={5}
-            />
+              onPress={() => setActivePicker(activePicker === 'startTime' ? null : 'startTime')}
+              disabled={submitting}
+              activeOpacity={0.7}
+            >
+              <Text style={startTimeObj ? styles.inputValueText : styles.inputPlaceholderText}>
+                {startTimeObj ? formatTimeDisplay(startTimeObj) : 'HH:MM'}
+              </Text>
+            </TouchableOpacity>
+            {activePicker === 'startTime' && (
+              <DateTimePicker
+                value={startTimeObj ?? new Date()}
+                mode="time"
+                is24Hour
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selected) => handlePickerChange('startTime', event, selected)}
+              />
+            )}
           </View>
           <View style={[styles.section, styles.rowHalf]}>
             <Text style={styles.label}>Fin</Text>
-            <TextInput
+            <TouchableOpacity
               style={styles.input}
-              value={endTime}
-              onChangeText={setEndTime}
-              placeholder="HH:MM"
-              placeholderTextColor={colors.dim}
-              keyboardType="numbers-and-punctuation"
-              editable={!submitting}
-              maxLength={5}
-            />
+              onPress={() => setActivePicker(activePicker === 'endTime' ? null : 'endTime')}
+              disabled={submitting}
+              activeOpacity={0.7}
+            >
+              <Text style={endTimeObj ? styles.inputValueText : styles.inputPlaceholderText}>
+                {endTimeObj ? formatTimeDisplay(endTimeObj) : 'HH:MM'}
+              </Text>
+            </TouchableOpacity>
+            {activePicker === 'endTime' && (
+              <DateTimePicker
+                value={endTimeObj ?? new Date()}
+                mode="time"
+                is24Hour
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selected) => handlePickerChange('endTime', event, selected)}
+              />
+            )}
           </View>
         </View>
 
@@ -450,16 +543,50 @@ export default function PostMatchScreen() {
 
             <View style={styles.section}>
               <Text style={styles.label}>Plazo de confirmación</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmationDeadline}
-                onChangeText={setConfirmationDeadline}
-                placeholder="AAAA-MM-DD HH:MM"
-                placeholderTextColor={colors.dim}
-                keyboardType="numbers-and-punctuation"
-                editable={!submitting}
-                maxLength={16}
-              />
+              <View style={styles.row2}>
+                <View style={styles.rowHalf}>
+                  <TouchableOpacity
+                    style={styles.input}
+                    onPress={() => setActivePicker(activePicker === 'deadlineDate' ? null : 'deadlineDate')}
+                    disabled={submitting}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={deadlineDateObj ? styles.inputValueText : styles.inputPlaceholderText}>
+                      {deadlineDateObj ? formatDateDisplay(deadlineDateObj) : 'Fecha'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.rowHalf}>
+                  <TouchableOpacity
+                    style={styles.input}
+                    onPress={() => setActivePicker(activePicker === 'deadlineTime' ? null : 'deadlineTime')}
+                    disabled={submitting}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={deadlineTimeObj ? styles.inputValueText : styles.inputPlaceholderText}>
+                      {deadlineTimeObj ? formatTimeDisplay(deadlineTimeObj) : 'HH:MM'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {activePicker === 'deadlineDate' && (
+                <DateTimePicker
+                  value={deadlineDateObj ?? new Date()}
+                  mode="date"
+                  minimumDate={new Date()}
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onChange={(event, selected) => handlePickerChange('deadlineDate', event, selected)}
+                />
+              )}
+              {activePicker === 'deadlineTime' && (
+                <DateTimePicker
+                  value={deadlineTimeObj ?? new Date()}
+                  mode="time"
+                  is24Hour
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selected) => handlePickerChange('deadlineTime', event, selected)}
+                />
+              )}
               <Text style={styles.hint}>Debe ser antes de la fecha del partido</Text>
             </View>
           </>
@@ -573,6 +700,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: colors.text,
+    justifyContent: 'center',
+  },
+  inputValueText: {
+    fontSize: 15,
+    color: colors.text,
+  },
+  inputPlaceholderText: {
+    fontSize: 15,
+    color: colors.dim,
   },
   hint: {
     fontSize: 11,

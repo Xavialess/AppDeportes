@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { LogoutButton } from '@/app/(dashboard)/LogoutButton';
 import { NavLink } from '@/app/dashboard/NavLink';
+import { MobileNav } from '@/app/dashboard/MobileNav';
 import styles from '@/app/(dashboard)/dashboard.module.css';
 
 interface DashboardLayoutProps {
@@ -14,7 +15,7 @@ const NAV_ITEMS = [
   { icon: '⚽', label: 'Mis partidos', href: '/dashboard/matches', exact: false },
   { icon: '🏟️', label: 'Mis canchas', href: '/dashboard/fields', exact: false },
   { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', exact: false },
-] as const;
+];
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
   const supabase = await createClient();
@@ -57,6 +58,11 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   const roleLabel = role === 'admin' ? 'Administrador' : 'Propietario';
 
+  const mobileNavItems = [
+    ...NAV_ITEMS,
+    ...(role === 'admin' ? [{ icon: '🛡️', label: 'Admin', href: '/admin', exact: false }] : []),
+  ];
+
   return (
     <div className={styles.shell}>
       <nav className={styles.sidebar} aria-label="Navegación principal">
@@ -66,6 +72,12 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
               cancha<span className={styles.brandDot}>.</span>
             </span>
           </div>
+          <MobileNav
+            items={mobileNavItems}
+            userInitials={initials}
+            userName={displayName}
+            roleLabel={roleLabel}
+          />
         </div>
 
         <ul className={styles.nav} role="list">

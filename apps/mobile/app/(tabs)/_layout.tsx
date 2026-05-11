@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors } from '../../lib/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -32,6 +33,7 @@ export default function TabsLayout() {
           title: 'Inicio',
           tabBarIcon: ({ focused }) => tabIcon(focused, 'compass', 'compass-outline'),
         }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
         name="matches"
@@ -39,6 +41,7 @@ export default function TabsLayout() {
           title: 'Partidos',
           tabBarIcon: ({ focused }) => tabIcon(focused, 'football', 'football-outline'),
         }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
         name="my-matches"
@@ -46,6 +49,7 @@ export default function TabsLayout() {
           title: 'Mis partidos',
           tabBarIcon: ({ focused }) => tabIcon(focused, 'calendar', 'calendar-outline'),
         }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
         name="profile"
@@ -53,6 +57,7 @@ export default function TabsLayout() {
           title: 'Perfil',
           tabBarIcon: ({ focused }) => tabIcon(focused, 'person', 'person-outline'),
         }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
     </Tabs>
   );

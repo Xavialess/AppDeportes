@@ -6,8 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -99,6 +102,7 @@ export default function MatchDetailScreen() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [heroUrl, setHeroUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -130,6 +134,23 @@ export default function MatchDetailScreen() {
 
       const fullMatch: MatchDetail = { ...raw, enrolled_count: enrollCount ?? 0 };
       setMatch(fullMatch);
+
+      // Fetch hero image from storage
+      if (raw.fields?.id) {
+        try {
+          const { data: files } = await supabase.storage
+            .from('field-images')
+            .list(raw.fields.id);
+          if (files && files.length > 0) {
+            const { data: urlData } = supabase.storage
+              .from('field-images')
+              .getPublicUrl(`${raw.fields.id}/${files[0].name}`);
+            setHeroUrl(urlData?.publicUrl ?? null);
+          }
+        } catch {
+          // non-fatal: hero image is optional
+        }
+      }
 
       if (user?.id) {
         const { data: enrollRow } = await supabase
@@ -189,6 +210,29 @@ export default function MatchDetailScreen() {
           headerShadowVisible: false,
         }}
       />
+
+      {/* Hero image / gradient placeholder */}
+      <View style={styles.heroContainer}>
+        {heroUrl ? (
+          <Image
+            source={{ uri: heroUrl }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <LinearGradient
+            colors={['#1a1a1a', '#0d1a00']}
+            style={styles.heroImage}
+          />
+        )}
+        {match.sports && (
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>
+              {match.sports.icon ? `${match.sports.icon} ` : ''}{match.sports.name}
+            </Text>
+          </View>
+        )}
+      </View>
 
       <ScrollView
         style={styles.scroll}
@@ -263,9 +307,17 @@ export default function MatchDetailScreen() {
       {/* Bottom enroll bar */}
       <View style={styles.bottomBar}>
         {isEnrolled ? (
-          <View style={styles.enrolledBadge}>
-            <Text style={styles.enrolledBadgeText}>✓ Ya estás inscrito</Text>
-          </View>
+          <>
+            <View style={styles.enrolledBadge}>
+              <Text style={styles.enrolledBadgeText}>✓ Ya estás inscrito</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push(`/match/${id}/enroll` as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.enrolledLink}>Ver detalles de tu inscripción →</Text>
+            </TouchableOpacity>
+          </>
         ) : isFull ? (
           <View style={[styles.ctaButton, styles.ctaDisabled]}>
             <Text style={styles.ctaButtonText}>Lleno</Text>
@@ -281,7 +333,10 @@ export default function MatchDetailScreen() {
         ) : (
           <TouchableOpacity
             style={styles.ctaButton}
-            onPress={() => router.push(`/match/${id}/enroll` as any)}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push(`/match/${id}/enroll` as any);
+            }}
             activeOpacity={0.8}
           >
             <Text style={styles.ctaButtonText}>
@@ -362,9 +417,33 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
+  },
+  heroContainer: {
+    width: '100%',
+    height: 220,
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: 220,
+  },
+  heroBadge: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: spacing.md,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.badge,
+  },
+  heroBadgeText: {
+    color: colors.accentFg,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   headerCard: {
     paddingHorizontal: spacing.sm,
@@ -482,6 +561,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.accent,
+  },
+  enrolledLink: {
+    fontSize: 13,
+    color: colors.dim,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   errorText: {
     fontSize: 15,

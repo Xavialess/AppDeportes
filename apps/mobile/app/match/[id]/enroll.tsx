@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useSession';
 import { colors, radius, spacing } from '../../../lib/theme';
@@ -135,6 +136,7 @@ export default function EnrollScreen() {
         throw insertErr;
       }
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setScreenState('success');
     } catch {
       setErrorMessage('No se pudo completar la inscripción. Intenta de nuevo.');

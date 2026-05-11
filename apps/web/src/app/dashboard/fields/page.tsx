@@ -45,12 +45,14 @@ export default async function FieldsPage() {
           {fields.map((field) => {
             const city = field.cities as { name: string } | null;
             return (
-              <li key={field.id} className={styles.card}>
-                <div className={styles.cardName}>{field.name}</div>
-                <div className={styles.cardMeta}>
-                  {field.address}
-                  {city ? ` · ${city.name}` : ''}
-                </div>
+              <li key={field.id}>
+                <Link href={`/dashboard/fields/${field.id}`} className={styles.card} style={{ display: 'block', textDecoration: 'none' }}>
+                  <div className={styles.cardName}>{field.name}</div>
+                  <div className={styles.cardMeta}>
+                    {field.address}
+                    {city ? ` · ${city.name}` : ''}
+                  </div>
+                </Link>
               </li>
             );
           })}

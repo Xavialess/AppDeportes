@@ -2,12 +2,14 @@ import { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -50,6 +52,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   async function fetchProfile() {
     if (!user) return;
@@ -89,6 +92,55 @@ export default function ProfileScreen() {
     setRefreshing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  async function pickAndUploadAvatar() {
+    if (!user) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.75,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploadingAvatar(true);
+    try {
+      const asset = result.assets[0];
+      const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      const storagePath = `${user.id}/avatar.${ext}`;
+
+      const arrayBuffer = await fetch(asset.uri).then((r) => r.arrayBuffer());
+
+      const { error: uploadErr } = await supabase.storage
+        .from('avatars')
+        .upload(storagePath, arrayBuffer, { contentType: mimeType, upsert: true });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(storagePath);
+
+      const { error: updateErr } = await supabase
+        .from('users')
+        .update({ avatar: publicUrl })
+        .eq('id', user.id);
+
+      if (updateErr) throw updateErr;
+
+      setProfile((prev) => prev ? { ...prev, avatar: publicUrl } : prev);
+    } catch {
+      // silently ignore — user stays with current avatar
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -145,9 +197,29 @@ export default function ProfileScreen() {
 
       {/* Avatar + name section */}
       <View style={styles.avatarSection}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarInitials}>{initials}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.avatarWrapper}
+          onPress={pickAndUploadAvatar}
+          disabled={uploadingAvatar}
+          activeOpacity={0.8}
+        >
+          {profile?.avatar ? (
+            <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+          )}
+          {uploadingAvatar ? (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator size="small" color="#fff" />
+            </View>
+          ) : (
+            <View style={styles.avatarEditBadge}>
+              <Text style={styles.avatarEditIcon}>✎</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
         <View style={styles.nameBlock}>
           <View style={styles.nameRow}>
@@ -265,6 +337,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     gap: spacing.lg,
   },
+  avatarWrapper: {
+    width: 72,
+    height: 72,
+    flexShrink: 0,
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    backgroundColor: colors.line,
+  },
   avatarCircle: {
     width: 72,
     height: 72,
@@ -272,13 +356,41 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
   avatarInitials: {
     fontSize: 24,
     fontWeight: '800',
     color: colors.accentFg,
     letterSpacing: -0.5,
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+  avatarEditIcon: {
+    fontSize: 10,
+    color: colors.accentFg,
+    fontWeight: '700',
   },
   nameBlock: {
     flex: 1,

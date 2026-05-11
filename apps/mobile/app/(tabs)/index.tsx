@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -25,6 +26,7 @@ interface Field {
   id: string;
   name: string;
   address: string;
+  images: string[];
 }
 
 interface Match {
@@ -105,7 +107,7 @@ export default function MatchListScreen() {
     try {
       let query = supabase
         .from('matches')
-        .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sport_id, sports(id, name, icon), fields(id, name, address)')
+        .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sport_id, sports(id, name, icon), fields(id, name, address, images)')
         .eq('status', 'open')
         .eq('is_visible', true)
         .order('date', { ascending: true })
@@ -184,12 +186,18 @@ export default function MatchListScreen() {
       ? item.max_players - item.enrolled_count
       : null;
 
+    const coverImage = item.fields?.images?.[0] ?? null;
+
     return (
       <TouchableOpacity
         style={styles.card}
         onPress={() => router.push(`/match/${item.id}` as any)}
         activeOpacity={0.75}
       >
+        {coverImage ? (
+          <Image source={{ uri: coverImage }} style={styles.cardCover} />
+        ) : null}
+        <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardSport}>{sportLabel}</Text>
           {slotsLeft !== null && slotsLeft > 0 && (
@@ -227,6 +235,7 @@ export default function MatchListScreen() {
               </Text>
             </View>
           )}
+        </View>
         </View>
       </TouchableOpacity>
     );
@@ -388,9 +397,17 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xl,
     marginBottom: spacing.md,
     borderRadius: radius.cardLg,
-    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    overflow: 'hidden',
+  },
+  cardCover: {
+    width: '100%',
+    height: 140,
+    backgroundColor: colors.line,
+  },
+  cardBody: {
+    padding: spacing.lg,
   },
   cardHeader: {
     flexDirection: 'row',

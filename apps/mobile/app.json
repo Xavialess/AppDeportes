@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "AppDeportes",
-    "slug": "appdeportes",
+    "name": "cancha.",
+    "slug": "cancha-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "appdeportes",
+    "scheme": "cancha",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a0a0a"
+      "backgroundColor": "#0d2a1e"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.appdeportes.app",
+      "bundleIdentifier": "app.cancha.ios",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -22,9 +22,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0a0a0a"
+        "backgroundColor": "#0d2a1e"
       },
-      "package": "com.appdeportes.app"
+      "package": "app.cancha.android"
     },
     "web": {
       "bundler": "metro",

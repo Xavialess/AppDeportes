@@ -1,10 +1,10 @@
 {
-  "name": "AppDeportes",
-  "short_name": "AppDeportes",
+  "name": "cancha.",
+  "short_name": "cancha.",
   "description": "Encuentra y únete a partidos de fútbol en Ecuador",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
+  "background_color": "#0d2a1e",
   "theme_color": "#d4ff3a",
   "icons": [
     { "src": "/icon.png", "sizes": "32x32", "type": "image/png" },

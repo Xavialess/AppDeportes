@@ -11,6 +11,7 @@ import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useSession';
 import { colors, radius, spacing } from '../../../lib/theme';
+import { formatPrice } from '../../../lib/format';
 
 // ---- types ---------------------------------------------------------------
 
@@ -38,11 +39,6 @@ function formatShortDate(dateStr: string, timeStr: string): string {
   const dayName = DAYS_ES[date.getDay()];
   const monthName = MONTHS_ES[month - 1];
   return `${dayName} ${day} ${monthName} · ${timeStr.slice(0, 5)}`;
-}
-
-function formatPrice(price: number | null): string {
-  if (price == null) return '—';
-  return `$${price.toFixed(2)}`;
 }
 
 // ---- screen ---------------------------------------------------------------

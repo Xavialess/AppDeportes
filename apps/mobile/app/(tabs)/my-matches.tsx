@@ -9,9 +9,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import { useSession } from '../../hooks/useSession';
+import { formatPrice } from '../../lib/format';
 
 // ---- types ---------------------------------------------------------------
 
@@ -105,6 +107,7 @@ function getEnrollmentBadge(status: EnrollmentStatus): BadgeConfig {
 // ---- component ------------------------------------------------------------
 
 export default function MyMatchesScreen() {
+  const insets = useSafeAreaInsets();
   const { user, loading: sessionLoading } = useSession();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,7 +192,7 @@ export default function MyMatchesScreen() {
             <Text style={styles.cancelledLabel}>Partido cancelado</Text>
           )}
           {!isCancelled && upcoming && match.price_per_player != null && (
-            <Text style={styles.price}>${match.price_per_player.toFixed(2)}</Text>
+            <Text style={styles.price}>{formatPrice(match.price_per_player)}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -199,7 +202,7 @@ export default function MyMatchesScreen() {
   function renderHeader() {
     const upcomingCount = enrollments.filter(isUpcoming).length;
     return (
-      <View style={styles.screenHeader}>
+      <View style={[styles.screenHeader, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.screenTag}>Historial</Text>
         <Text style={styles.screenTitle}>
           Mis partidos<Text style={styles.screenTitleDot}>.</Text>
@@ -260,7 +263,7 @@ export default function MyMatchesScreen() {
         }
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
         }
         showsVerticalScrollIndicator={false}
       />
@@ -287,7 +290,6 @@ const styles = StyleSheet.create({
   },
   screenHeader: {
     paddingHorizontal: spacing.xl,
-    paddingTop: 64,
     paddingBottom: spacing.lg,
   },
   screenTag: {

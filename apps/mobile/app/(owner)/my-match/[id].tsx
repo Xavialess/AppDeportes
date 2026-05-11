@@ -11,6 +11,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { colors, radius, spacing } from '../../../lib/theme';
+import { formatPrice } from '../../../lib/format';
 
 type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
@@ -348,7 +349,7 @@ export default function OwnerMatchDetailScreen() {
 
           {match.type === 'open' && match.price_per_player != null && (
             <Text style={styles.priceLine}>
-              <Text style={styles.priceAmount}>${match.price_per_player.toFixed(2)}</Text>
+              <Text style={styles.priceAmount}>{formatPrice(match.price_per_player)}</Text>
               {' '}por jugador
               {match.min_players != null ? ` · Mín. ${match.min_players}` : ''}
             </Text>
@@ -356,7 +357,7 @@ export default function OwnerMatchDetailScreen() {
 
           {match.type === 'reservation' && match.total_price != null && (
             <Text style={styles.priceLine}>
-              Reserva · <Text style={styles.priceAmount}>${match.total_price.toFixed(2)}</Text> total
+              Reserva · <Text style={styles.priceAmount}>{formatPrice(match.total_price)}</Text> total
             </Text>
           )}
         </View>

@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -103,6 +104,7 @@ function MatchCard({ match }: { match: Match }) {
 }
 
 export default function OwnerHomeScreen() {
+  const insets = useSafeAreaInsets();
   const { user, loading: sessionLoading } = useSession();
 
   const [matches, setMatches] = useState<Match[]>([]);
@@ -195,10 +197,11 @@ export default function OwnerHomeScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
         ListHeaderComponent={
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
             <View>
               <Text style={styles.headerTag}>Panel del propietario</Text>
               <Text style={styles.headerTitle}>
@@ -261,7 +264,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
-    paddingTop: 64,
     paddingBottom: spacing.lg,
   },
   headerTag: {

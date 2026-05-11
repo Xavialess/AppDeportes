@@ -11,6 +11,7 @@ import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
 import { colors, radius, spacing } from '../../lib/theme';
+import { formatPrice } from '../../lib/format';
 
 // ---- types ---------------------------------------------------------------
 
@@ -57,11 +58,6 @@ function formatFullDate(dateStr: string): string {
 
 function formatTime(timeStr: string): string {
   return timeStr.slice(0, 5);
-}
-
-function formatPrice(price: number | null): string {
-  if (price == null) return '—';
-  return `$${price.toFixed(2)}`;
 }
 
 function formatDeadlineDetail(deadlineStr: string | null): { label: string; expired: boolean } {

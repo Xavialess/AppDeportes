@@ -11,8 +11,10 @@ import {
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
+import { formatPrice } from '../../lib/format';
 
 // ---- types ---------------------------------------------------------------
 
@@ -60,11 +62,6 @@ function formatMatchDate(dateStr: string, timeStr: string): string {
   return `${dayName} ${day} ${monthName} · ${hhmm}`;
 }
 
-function formatPrice(price: number | null): string {
-  if (price == null) return '—';
-  return `$${price.toFixed(2)}`;
-}
-
 function formatDeadline(deadlineStr: string | null): string | null {
   if (!deadlineStr) return null;
   const deadline = new Date(deadlineStr);
@@ -84,6 +81,7 @@ function formatDeadline(deadlineStr: string | null): string | null {
 // ---- component ------------------------------------------------------------
 
 export default function MatchListScreen() {
+  const insets = useSafeAreaInsets();
   const [matches, setMatches] = useState<Match[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
@@ -244,7 +242,7 @@ export default function MatchListScreen() {
   function renderHeader() {
     return (
       <View>
-        <View style={styles.screenHeader}>
+        <View style={[styles.screenHeader, { paddingTop: insets.top + 16 }]}>
           <Text style={styles.screenTag}>Partidos abiertos</Text>
           <Text style={styles.screenTitle}>
             cancha<Text style={styles.screenTitleDot}>.</Text>
@@ -322,6 +320,7 @@ export default function MatchListScreen() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -348,7 +347,6 @@ const styles = StyleSheet.create({
   },
   screenHeader: {
     paddingHorizontal: spacing.xl,
-    paddingTop: 64,
     paddingBottom: spacing.lg,
   },
   screenTag: {

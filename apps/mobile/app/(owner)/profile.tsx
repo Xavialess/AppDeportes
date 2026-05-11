@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import { useSession } from '../../hooks/useSession';
@@ -39,6 +40,7 @@ function getInitials(name: string | null, email: string | null): string {
 }
 
 export default function OwnerProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { user, loading: sessionLoading } = useSession();
 
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
@@ -230,15 +232,15 @@ export default function OwnerProfileScreen() {
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
         }
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <View style={styles.screenHeader}>
+        <View style={[styles.screenHeader, { paddingTop: insets.top + 16 }]}>
           <Text style={styles.screenTag}>Panel del propietario</Text>
           <Text style={styles.screenTitle}>
             Perfil<Text style={styles.screenTitleDot}>.</Text>
@@ -412,7 +414,6 @@ const styles = StyleSheet.create({
   },
   screenHeader: {
     paddingHorizontal: spacing.xl,
-    paddingTop: 64,
     paddingBottom: spacing.lg,
   },
   screenTag: {

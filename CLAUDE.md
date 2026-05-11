@@ -1,7 +1,7 @@
 # AppDeportes — Project Context for Claude Code
 
 > **Living document.** Update at the end of every session where something significant is built or decided.
-> Last updated: 2026-05-10 (admin panel, mobile bug fixes, route conflict fix)
+> Last updated: 2026-05-10 (admin panel, mobile bug fixes, route conflict fix, Supabase Storage)
 
 ---
 
@@ -194,7 +194,7 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
   - Manual refund tooling (refunds page is a stub)
 - Push notifications
 - Player Pro subscription flow
-- Supabase Storage setup (field images, avatars)
+- ~~Supabase Storage setup (field images, avatars)~~ ✓ Done
 
 ---
 
@@ -258,3 +258,4 @@ Key routing rules:
 | 2026-05-10 | Fixed mobile SessionGate re-routing: added `hasRouted` ref so `router.replace()` only fires once on initial load, not on every token refresh or session state change. |
 | 2026-05-10 | Fixed mobile route conflict: `(owner)/match/[id]` and `match/[id]` both resolved to `/match/[id]` in Expo Router, causing players to see owner UI. Renamed owner match detail to `(owner)/my-match/[id]` → URL `/my-match/[id]`. Updated owner index navigation accordingly. Owner cancel/hide match on mobile (APPD-19) was already implemented in the owner detail screen. |
 | 2026-05-10 | Admin plans CRUD (`/admin/plans`) and owner plan assignment (`/admin/owners` — dropdown + toggle). Fixed Server Actions to re-verify admin role independently (layout check alone doesn't gate POST endpoints). Fixed `toggleSubscription` to read DB state instead of trusting form field. Fixed `getSession()` → `getUser()` in mobile match cancel. |
+| 2026-05-10 | Supabase Storage: migration `20240101000010_storage_buckets.sql` creates `avatars` + `field-images` buckets with RLS policies scoped by user/owner. Mobile: avatar upload via `expo-image-picker` in both player and owner profile screens (initials fallback, edit badge overlay). Mobile match listing shows field cover image when available. Web: `/dashboard/fields/[id]` field detail page with image grid, Server Action upload, and per-image delete. Fields list now links to detail page. Fixed: `assignPlan` Server Action resets `subscription_status → inactive` when plan removed (ghost-active state bug). Fixed: mobile player profile was selecting `avatar_url` (non-existent column) causing silent query error + simultaneous error + fallback data render; renamed to `avatar`. |

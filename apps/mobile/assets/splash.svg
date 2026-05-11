@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 2048 2048">
+  <!-- Dark background -->
+  <rect width="2048" height="2048" fill="#0a0a0a"/>
+  <!-- Triangle logomark centered -->
+  <polygon
+    points="1024,700 1300,1200 748,1200"
+    fill="none"
+    stroke="#d4ff3a"
+    stroke-width="56"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+  <!-- Lime accent dot -->
+  <circle cx="1024" cy="1060" r="72" fill="#d4ff3a"/>
+</svg>

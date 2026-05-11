@@ -367,11 +367,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   headerCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.cardLg,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.line,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
     gap: spacing.md,
   },
   sportTitle: {

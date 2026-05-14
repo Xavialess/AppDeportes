@@ -8,6 +8,7 @@
     "pnpm": ">=9"
   },
   "scripts": {
+    "postinstall": "turbo run build --filter='./packages/*'",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:mobile": "turbo run dev --filter=mobile",

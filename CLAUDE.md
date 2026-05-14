@@ -189,7 +189,7 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
 
 ## What's NOT Built Yet (V1 scope remaining)
 
-- Payment integration (provider TBD: Kushki or PayPhone)
+- Payment integration (provider TBD: Stripe or Kushki — PayPhone eliminated). **Apple Pay is a V1 requirement.** Must use native payment sheet SDK (`@stripe/stripe-react-native` or `@kushki/kushki-checkout-react-native`), not a WebView redirect. Requires Apple Merchant ID in App Store Connect before TestFlight build.
 - Admin panel — mostly done; still missing:
   - Manual refund tooling (refunds page is a stub)
 - Push notifications

@@ -36,14 +36,6 @@ export default function TabsLayout() {
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
-        name="matches"
-        options={{
-          title: 'Partidos',
-          tabBarIcon: ({ focused }) => tabIcon(focused, 'football', 'football-outline'),
-        }}
-        listeners={{ tabPress: () => Haptics.selectionAsync() }}
-      />
-      <Tabs.Screen
         name="my-matches"
         options={{
           title: 'Mis partidos',

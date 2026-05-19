@@ -2,10 +2,13 @@ import { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@appdeportes/i18n';
 import { useSession } from '../hooks/useSession';
 import { supabase } from '../lib/supabase';
+
+SplashScreen.preventAutoHideAsync();
 
 type UserRole = 'player' | 'owner' | 'admin';
 
@@ -15,12 +18,15 @@ function SessionGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    if (hasRouted.current) return;
 
     if (!session) {
+      hasRouted.current = false;
+      SplashScreen.hideAsync();
       router.replace('/(auth)/login');
       return;
     }
+
+    if (hasRouted.current) return;
 
     supabase
       .from('users')
@@ -29,12 +35,14 @@ function SessionGate({ children }: { children: React.ReactNode }) {
       .single()
       .then(({ data }) => {
         if (!data) {
+          SplashScreen.hideAsync();
           router.replace('/(auth)/login');
           return;
         }
 
         hasRouted.current = true;
         const role = data.role as UserRole;
+        SplashScreen.hideAsync();
         if (role === 'player') {
           router.replace('/(tabs)/');
         } else {

@@ -48,8 +48,18 @@ export default function OwnerLayout() {
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
+      <Tabs.Screen
+        name="fields"
+        options={{
+          title: 'Canchas',
+          tabBarIcon: ({ focused }) => tabIcon(focused, 'location', 'location-outline'),
+        }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
+      />
       <Tabs.Screen name="post-match" options={hiddenScreen} />
       <Tabs.Screen name="match" options={hiddenScreen} />
+      <Tabs.Screen name="my-match" options={hiddenScreen} />
+      <Tabs.Screen name="my-field" options={hiddenScreen} />
     </Tabs>
   );
 }

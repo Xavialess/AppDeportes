@@ -1,7 +1,7 @@
 # AppDeportes — Project Context for Claude Code
 
 > **Living document.** Update at the end of every session where something significant is built or decided.
-> Last updated: 2026-05-11 (mobile + web polish sprint — 34 tickets, 20 implemented)
+> Last updated: 2026-05-14 (owner mobile UX — hidden my-match tab, field image management)
 
 ---
 
@@ -20,7 +20,7 @@ A sports booking app for Ecuador, similar to GoodRec. Players find and join open
 | Web | Next.js 15 (App Router) + React 19 |
 | Database / Auth / Realtime | Supabase (Postgres 15) |
 | Server logic | Supabase Edge Functions (Deno) |
-| Payments | TBD — Kushki or PayPhone (Ecuador). Data model is provider-agnostic. |
+| Payments | TBD — Stripe or Kushki. Apple Pay required. Data model is provider-agnostic. |
 | i18n | i18next + react-i18next. Spanish default. English file exists but is empty. |
 | Language | TypeScript throughout |
 
@@ -182,7 +182,9 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
 - **`matches_played`**: never increment manually — Edge Function only
 - **Role checks in RLS**: always use `public.is_admin()` / `public.is_owner_or_admin()` — never read from `user_metadata`
 - **Admin role assignment**: the `handle_new_user` trigger never assigns `admin` role — promote via SQL: `UPDATE public.users SET role = 'admin' WHERE email = '...'` using service role. No UI for this in V1.
-- **Mobile route groups and URL conflicts**: Expo Router strips group prefixes from URLs. `(owner)/match/[id]` and `match/[id]` both resolve to `/match/[id]` and will conflict. Owner match detail lives at `(owner)/my-match/[id]` → URL `/my-match/[id]` to avoid this. Never add a `match/` folder inside a route group if a top-level `match/` already exists.
+- **Mobile route groups and URL conflicts**: Expo Router strips group prefixes from URLs. `(owner)/match/[id]` and `match/[id]` both resolve to `/match/[id]` and will conflict. Owner match detail lives at `(owner)/my-match/[id]` → URL `/my-match/[id]` to avoid this. Owner field detail lives at `(owner)/my-field/[id]` → URL `/my-field/[id]`. Never add a folder inside a route group if a top-level folder with the same name already exists.
+- **Owner hidden screens**: In `(owner)/_layout.tsx`, screens that are navigation targets but NOT tab items must be explicitly listed with `href: null` — `post-match`, `match`, `my-match`, `my-field`. Forgetting one causes it to appear as a visible tab.
+- **Mobile field image uploads**: use the authenticated supabase client directly (no admin client) — RLS on `field-images` bucket allows owners to insert/delete under their own field IDs. Storage path format: `{field_id}/{timestamp}-{random}.{ext}`.
 - **Mobile SessionGate**: `apps/mobile/app/_layout.tsx`. Uses a `hasRouted` ref so `router.replace()` only fires once on initial load — subsequent session token refreshes do NOT re-route the user. If you need to force re-routing after a role change, reset `hasRouted.current = false` before navigating.
 
 ---
@@ -260,3 +262,4 @@ Key routing rules:
 | 2026-05-10 | Admin plans CRUD (`/admin/plans`) and owner plan assignment (`/admin/owners` — dropdown + toggle). Fixed Server Actions to re-verify admin role independently (layout check alone doesn't gate POST endpoints). Fixed `toggleSubscription` to read DB state instead of trusting form field. Fixed `getSession()` → `getUser()` in mobile match cancel. |
 | 2026-05-10 | Supabase Storage: migration `20240101000010_storage_buckets.sql` creates `avatars` + `field-images` buckets with RLS policies scoped by user/owner. Mobile: avatar upload via `expo-image-picker` in both player and owner profile screens (initials fallback, edit badge overlay). Mobile match listing shows field cover image when available. Web: `/dashboard/fields/[id]` field detail page with image grid, Server Action upload, and per-image delete. Fields list now links to detail page. Fixed: `assignPlan` Server Action resets `subscription_status → inactive` when plan removed (ghost-active state bug). Fixed: mobile player profile was selecting `avatar_url` (non-existent column) causing silent query error + simultaneous error + fallback data render; renamed to `avatar`. |
 | 2026-05-11 | 34 Jira tickets (APPD-32 to APPD-65) from mobile + web visual audits. Implemented ~20 polish tickets in parallel batches: safe area insets, RefreshControl Android color, price formatting util, match card visual hierarchy (accent sport pill, accent price), web CSS dedup, next/font migration, select styling, clickable match rows, dashboard real stats cards, mobile hamburger nav, loading skeletons + error boundaries + branded 404, field cards with active match counts, upgrade nudge banner at 80% plan limit, cancel match confirmation dialog, SVG sport icon in empty state, sport name accent pill on match cards, Open Graph metadata, enrollment status color badges, avatar edit badge enlarged, match detail flat header (no redundant card), skeleton loading screens (SkeletonCard component with staggered shimmer), improved empty states (visual pitch icon illustrations), tab bar icons via Ionicons, sport emoji on filter chips + match card pills, slide_from_right screen transitions. |
+| 2026-05-14 | Fixed `my-match` appearing as a visible tab in owner mode (was missing from `hiddenScreen` list in `(owner)/_layout.tsx`). Added "Canchas" tab to owner mode with two new screens: `(owner)/fields.tsx` (field list with cover image + photo count) and `(owner)/my-field/[id].tsx` (image grid with add/delete — multi-select from gallery, uploads directly via authenticated client to `field-images` bucket, "Portada" badge on cover image). |

@@ -29,6 +29,12 @@ const NAV_GROUPS = [
       { href: '/admin/refunds', icon: '💸', label: 'Reembolsos' },
     ],
   },
+  {
+    label: 'Ventas',
+    items: [
+      { href: '/crm', icon: '🎯', label: 'CRM Pipeline' },
+    ],
+  },
 ];
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {

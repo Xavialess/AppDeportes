@@ -8,15 +8,26 @@ import {
   StyleSheet,
   RefreshControl,
   ScrollView,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import { formatPrice } from '../../lib/format';
 import SkeletonCard from '../../components/SkeletonCard';
 
+const CITY_STORE_KEY = 'selected_city_id';
+
 // ---- types ---------------------------------------------------------------
+
+interface City {
+  id: string;
+  name: string;
+}
 
 interface Sport {
   id: string;
@@ -29,6 +40,7 @@ interface Field {
   name: string;
   address: string;
   images: string[];
+  city_id: string;
 }
 
 interface Match {
@@ -82,37 +94,35 @@ function formatDeadline(deadlineStr: string | null): string | null {
 
 export default function MatchListScreen() {
   const insets = useSafeAreaInsets();
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchSports() {
-    const { data, error: err } = await supabase
-      .from('sports')
-      .select('id, name, icon')
-      .eq('is_active', true)
-      .order('name');
-    if (!err && data) {
-      setSports(data as Sport[]);
-    }
-  }
-
-  async function fetchMatches() {
+  async function fetchMatches(cityId: string | null, sportId: string | null) {
     setError(null);
     try {
       let query = supabase
         .from('matches')
-        .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sport_id, sports(id, name, icon), fields(id, name, address, images)')
+        .select(
+          'id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sport_id, sports(id, name, icon), fields!inner(id, name, address, images, city_id)'
+        )
         .eq('status', 'open')
         .eq('is_visible', true)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 
-      if (selectedSportId) {
-        query = query.eq('sport_id', selectedSportId);
+      if (cityId) {
+        query = query.eq('fields.city_id', cityId);
+      }
+      if (sportId) {
+        query = query.eq('sport_id', sportId);
       }
 
       const { data, error: err } = await query;
@@ -150,29 +160,55 @@ export default function MatchListScreen() {
     }
   }
 
-  async function loadAll() {
-    setLoading(true);
-    await Promise.all([fetchSports(), fetchMatches()]);
-    setLoading(false);
-  }
-
+  // Single init: resolves city (saved or first available) before first fetch
   useEffect(() => {
-    loadAll();
+    async function init() {
+      const [saved, citiesRes, sportsRes] = await Promise.all([
+        SecureStore.getItemAsync(CITY_STORE_KEY),
+        supabase.from('cities').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('sports').select('id, name, icon').eq('is_active', true).order('name'),
+      ]);
+
+      const fetchedCities = (citiesRes.data ?? []) as City[];
+      setCities(fetchedCities);
+      if (sportsRes.data) setSports(sportsRes.data as Sport[]);
+
+      let resolvedCityId = saved ?? null;
+      if (!resolvedCityId && fetchedCities.length > 0) {
+        resolvedCityId = fetchedCities[0].id;
+        await SecureStore.setItemAsync(CITY_STORE_KEY, resolvedCityId);
+      }
+      setSelectedCityId(resolvedCityId);
+
+      await fetchMatches(resolvedCityId, null);
+      setLoading(false);
+    }
+
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!loading) {
-      fetchMatches();
+      fetchMatches(selectedCityId, selectedSportId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSportId]);
+  }, [selectedSportId, selectedCityId]);
+
+  async function handleCitySelect(cityId: string) {
+    setSelectedCityId(cityId);
+    setCityPickerVisible(false);
+    await SecureStore.setItemAsync(CITY_STORE_KEY, cityId);
+  }
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchMatches();
+    await fetchMatches(selectedCityId, selectedSportId);
     setRefreshing(false);
-  }, [selectedSportId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSportId, selectedCityId]);
+
+  const selectedCity = cities.find((c) => c.id === selectedCityId) ?? null;
 
   function renderMatchCard({ item }: { item: Match }) {
     const sportIcon = item.sports?.icon ?? null;
@@ -197,48 +233,48 @@ export default function MatchListScreen() {
           <Image source={{ uri: coverImage }} style={styles.cardCover} />
         ) : null}
         <View style={styles.cardBody}>
-        <View style={styles.cardHeader}>
-          <View style={styles.sportPill}>
-            <Text style={styles.cardSport}>{sportLabel}</Text>
+          <View style={styles.cardHeader}>
+            <View style={styles.sportPill}>
+              <Text style={styles.cardSport}>{sportLabel}</Text>
+            </View>
+            {slotsLeft !== null && slotsLeft > 0 && (
+              <View style={styles.slotsBadge}>
+                <Text style={styles.slotsBadgeText}>{slotsLeft} CUPO{slotsLeft !== 1 ? 'S' : ''}</Text>
+              </View>
+            )}
           </View>
-          {slotsLeft !== null && slotsLeft > 0 && (
-            <View style={styles.slotsBadge}>
-              <Text style={styles.slotsBadgeText}>{slotsLeft} CUPO{slotsLeft !== 1 ? 'S' : ''}</Text>
-            </View>
-          )}
-        </View>
 
-        <Text style={styles.cardField} numberOfLines={1}>
-          {item.fields?.name ?? '—'}
-        </Text>
+          <Text style={styles.cardField} numberOfLines={1}>
+            {item.fields?.name ?? '—'}
+          </Text>
 
-        <View style={styles.cardMeta}>
-          <Text style={styles.cardMetaText}>{dateLabel}</Text>
-          {deadlineLabel ? (
-            <Text style={styles.cardDeadline}>{deadlineLabel}</Text>
-          ) : null}
-        </View>
+          <View style={styles.cardMeta}>
+            <Text style={styles.cardMetaText}>{dateLabel}</Text>
+            {deadlineLabel ? (
+              <Text style={styles.cardDeadline}>{deadlineLabel}</Text>
+            ) : null}
+          </View>
 
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardPrice}>{formatPrice(item.price_per_player)}</Text>
-          {item.max_players != null && (
-            <View style={styles.progressRow}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min(100, (item.enrolled_count / item.max_players) * 100)}%` },
-                  ]}
-                />
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardPrice}>{formatPrice(item.price_per_player)}</Text>
+            {item.max_players != null && (
+              <View style={styles.progressRow}>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${Math.min(100, (item.enrolled_count / item.max_players) * 100)}%` },
+                    ]}
+                  />
+                </View>
+                <View style={styles.playerPill}>
+                  <Text style={styles.progressLabel}>
+                    {item.enrolled_count}/{item.max_players}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.playerPill}>
-                <Text style={styles.progressLabel}>
-                  {item.enrolled_count}/{item.max_players}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -248,10 +284,36 @@ export default function MatchListScreen() {
     return (
       <View>
         <View style={[styles.screenHeader, { paddingTop: insets.top + 16 }]}>
-          <Text style={styles.screenTag}>Partidos abiertos</Text>
-          <Text style={styles.screenTitle}>
-            cancha<Text style={styles.screenTitleDot}>.</Text>
-          </Text>
+          <View style={styles.screenHeaderRow}>
+            <View>
+              <Text style={styles.screenTag}>Partidos abiertos</Text>
+              <Text style={styles.screenTitle}>
+                cancha<Text style={styles.screenTitleDot}>.</Text>
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.cityPill}
+              onPress={() => setCityPickerVisible(true)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name="location-sharp"
+                size={12}
+                color={colors.accentFg}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={styles.cityPillText}>
+                {selectedCity?.name ?? '—'}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={11}
+                color={colors.accentFg}
+                style={{ marginLeft: 2 }}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -282,6 +344,44 @@ export default function MatchListScreen() {
           ))}
         </ScrollView>
       </View>
+    );
+  }
+
+  function renderCityPicker() {
+    return (
+      <Modal
+        visible={cityPickerVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setCityPickerVisible(false)}
+      >
+        <Pressable style={styles.pickerOverlay} onPress={() => setCityPickerVisible(false)}>
+          <Pressable style={[styles.pickerSheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.pickerHandle} />
+
+            <Text style={styles.pickerTitle}>¿Dónde juegas?</Text>
+
+            {cities.map((city) => (
+              <TouchableOpacity
+                key={city.id}
+                style={styles.cityRow}
+                onPress={() => handleCitySelect(city.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.cityRowLeft}>
+                  <View style={[styles.cityDot, selectedCityId === city.id && styles.cityDotActive]} />
+                  <Text style={[styles.cityRowText, selectedCityId === city.id && styles.cityRowTextActive]}>
+                    {city.name}
+                  </Text>
+                </View>
+                {selectedCityId === city.id && (
+                  <Ionicons name="checkmark" size={18} color={colors.accent} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     );
   }
 
@@ -322,7 +422,9 @@ export default function MatchListScreen() {
               </View>
               <Text style={styles.emptyTitle}>No hay partidos cerca</Text>
               <Text style={styles.emptyText}>
-                Prueba otro deporte o revisa más tarde.
+                {selectedCity
+                  ? `No hay partidos en ${selectedCity.name} ahora mismo.`
+                  : 'Prueba otro deporte o revisa más tarde.'}
               </Text>
             </View>
           ) : null
@@ -338,6 +440,8 @@ export default function MatchListScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+
+      {renderCityPicker()}
     </View>
   );
 }
@@ -352,9 +456,16 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 40,
   },
+
+  // ---- header ----
   screenHeader: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
+  },
+  screenHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
   },
   screenTag: {
     fontSize: 11,
@@ -373,6 +484,24 @@ const styles = StyleSheet.create({
   screenTitleDot: {
     color: colors.accent,
   },
+
+  // ---- city pill (always accent — city is always selected) ----
+  cityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  cityPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.accentFg,
+  },
+
+  // ---- sport chips ----
   chipsContainer: {
     marginBottom: spacing.md,
   },
@@ -397,6 +526,8 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: colors.accentFg,
   },
+
+  // ---- match card ----
   card: {
     backgroundColor: colors.card,
     marginHorizontal: spacing.xl,
@@ -513,6 +644,65 @@ const styles = StyleSheet.create({
     color: colors.mute,
     fontWeight: '600',
   },
+
+  // ---- city picker modal ----
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#141414',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingHorizontal: spacing.xl,
+  },
+  pickerHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 20,
+  },
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  cityRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  cityDotActive: {
+    backgroundColor: colors.accent,
+  },
+  cityRowText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.mute,
+  },
+  cityRowTextActive: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+
+  // ---- empty / error ----
   emptyState: {
     flex: 1,
     alignItems: 'center',

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   FlatList,
@@ -27,6 +28,7 @@ interface Match {
   max_players: number | null;
   format: string | null;
   sports: { name: string } | null;
+  fields: { name: string; images: string[] } | null;
 }
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
@@ -56,6 +58,8 @@ function MatchCard({ match }: { match: Match }) {
   const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
   const enrolled = match.enrolled_count ?? 0;
   const max = match.max_players;
+  const coverImage = match.fields?.images?.[0] ?? null;
+  const sportLabel = `${match.sports?.name ?? 'Deporte'}${match.format ? ` · ${match.format}` : ''}`;
 
   return (
     <TouchableOpacity
@@ -63,42 +67,49 @@ function MatchCard({ match }: { match: Match }) {
       onPress={() => router.push(`/my-match/${match.id}` as any)}
       activeOpacity={0.75}
     >
-      <View style={styles.cardTop}>
-        <View style={styles.cardLeft}>
-          <Text style={styles.cardSport}>
-            {match.sports?.name ?? 'Deporte'}
-            {match.format ? ` · ${match.format}` : ''}
-          </Text>
-          <Text style={styles.cardDate}>
-            {formatMatchDate(match.date, match.start_time)}
-          </Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-          <Text style={[styles.statusText, { color: statusStyle.text }]}>
-            {STATUS_LABELS[match.status]}
-          </Text>
-        </View>
-      </View>
-
-      {match.type === 'open' && max != null && (
-        <View style={styles.cardBottom}>
-          <View style={styles.enrollBar}>
-            <View
-              style={[
-                styles.enrollFill,
-                { width: `${Math.min((enrolled / max) * 100, 100)}%` as any },
-              ]}
-            />
+      {coverImage ? (
+        <Image source={{ uri: coverImage }} style={styles.cardCover} />
+      ) : null}
+      <View style={styles.cardBody}>
+        <View style={styles.cardTop}>
+          <View style={styles.sportPill}>
+            <Text style={styles.cardSport}>{sportLabel}</Text>
           </View>
-          <Text style={styles.enrollCount}>{enrolled} / {max}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusText, { color: statusStyle.text }]}>
+              {STATUS_LABELS[match.status]}
+            </Text>
+          </View>
         </View>
-      )}
 
-      {match.type === 'reservation' && (
-        <View style={styles.cardBottomRow}>
-          <Text style={styles.reservationLabel}>Reserva completa</Text>
-        </View>
-      )}
+        {match.fields?.name ? (
+          <Text style={styles.cardField} numberOfLines={1}>{match.fields.name}</Text>
+        ) : null}
+
+        <Text style={styles.cardDate}>
+          {formatMatchDate(match.date, match.start_time)}
+        </Text>
+
+        {match.type === 'open' && max != null && (
+          <View style={styles.cardBottom}>
+            <View style={styles.enrollBar}>
+              <View
+                style={[
+                  styles.enrollFill,
+                  { width: `${Math.min((enrolled / max) * 100, 100)}%` as any },
+                ]}
+              />
+            </View>
+            <Text style={styles.enrollCount}>{enrolled} / {max}</Text>
+          </View>
+        )}
+
+        {match.type === 'reservation' && (
+          <View style={styles.cardBottomRow}>
+            <Text style={styles.reservationLabel}>Reserva completa</Text>
+          </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -131,7 +142,7 @@ export default function OwnerHomeScreen() {
 
       const { data, error: matchesError } = await supabase
         .from('matches')
-        .select('id, date, start_time, end_time, status, type, max_players, format, sports(name), enrollments(id, status)')
+        .select('id, date, start_time, end_time, status, type, max_players, format, sports(name), fields(name, images), enrollments(id, status)')
         .in('field_id', fieldIds)
         .order('date', { ascending: false })
         .order('start_time', { ascending: false });
@@ -305,9 +316,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   listContent: {
-    paddingHorizontal: spacing.xl,
     paddingBottom: 100,
     gap: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   listEmpty: {
     flex: 1,
@@ -315,36 +326,55 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.cardLg,
-    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    overflow: 'hidden',
+  },
+  cardCover: {
+    width: '100%',
+    height: 140,
+    backgroundColor: colors.line,
+  },
+  cardBody: {
+    padding: spacing.lg,
   },
   cardTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 6,
   },
-  cardLeft: {
-    flex: 1,
-    marginRight: spacing.md,
+  sportPill: {
+    backgroundColor: 'rgba(212,255,58,0.08)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    flexShrink: 1,
+    marginRight: spacing.sm,
   },
   cardSport: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
+    color: colors.accent,
     letterSpacing: -0.2,
+  },
+  cardField: {
+    fontSize: 13,
+    color: colors.mute,
+    marginBottom: 4,
   },
   cardDate: {
     fontSize: 12,
     color: colors.mute,
     fontWeight: '500',
+    marginBottom: spacing.sm,
   },
   statusBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radius.badge,
     alignSelf: 'flex-start',
+    flexShrink: 0,
   },
   statusText: {
     fontSize: 11,
@@ -355,13 +385,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
   cardBottomRow: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.line,

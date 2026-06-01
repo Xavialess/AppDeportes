@@ -57,7 +57,6 @@ export default function OwnerLayout() {
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen name="post-match" options={hiddenScreen} />
-      <Tabs.Screen name="match" options={hiddenScreen} />
       <Tabs.Screen name="my-match" options={hiddenScreen} />
       <Tabs.Screen name="my-field" options={hiddenScreen} />
     </Tabs>

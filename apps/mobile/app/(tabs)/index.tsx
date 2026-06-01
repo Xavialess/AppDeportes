@@ -400,7 +400,7 @@ export default function MatchListScreen() {
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={() => loadAll()} style={styles.retryButton}>
+          <TouchableOpacity onPress={() => fetchMatches(selectedCityId, selectedSportId)} style={styles.retryButton}>
             <Text style={styles.retryText}>Reintentar</Text>
           </TouchableOpacity>
         </View>

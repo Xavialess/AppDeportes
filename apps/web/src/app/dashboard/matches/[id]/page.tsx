@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import styles from '../matches.module.css';
 import CancelButton from './CancelButton';
 
@@ -27,34 +26,12 @@ function fmt(dateStr: string) {
   return d.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-async function cancelMatch(matchId: string, ownerId: string) {
-  'use server';
-  const supabase = createAdminClient();
-  await supabase
-    .from('matches')
-    .update({
-      status: 'cancelled' as MatchStatus,
-      cancellation_reason: 'Cancelado por el propietario',
-      cancelled_by: ownerId,
-    })
-    .eq('id', matchId)
-    .in('status', ['open', 'confirmed'] as MatchStatus[]);
-  // Mark active enrollments cancelled
-  await supabase
-    .from('enrollments')
-    .update({ status: 'cancelled' as EnrollmentStatus })
-    .eq('match_id', matchId)
-    .in('status', ['pending', 'confirmed'] as EnrollmentStatus[]);
-}
-
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ cancel?: string }>;
 }
 
-export default async function MatchDetailPage({ params, searchParams }: PageProps) {
+export default async function MatchDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const { cancel } = await searchParams;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -77,12 +54,6 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
 
   // Ensure this owner owns this field (admins may bypass)
   if (profile?.role !== 'admin' && field?.owner_id !== user.id) notFound();
-
-  // Handle cancel action
-  if (cancel === '1' && (matchRaw.status === 'open' || matchRaw.status === 'confirmed')) {
-    await cancelMatch(id, user.id);
-    redirect(`/dashboard/matches/${id}`);
-  }
 
   const { data: enrollmentsRaw } = await supabase
     .from('enrollments')

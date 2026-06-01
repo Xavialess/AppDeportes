@@ -693,3 +693,14 @@
 .confirmProceed:hover {
   background: rgba(255, 59, 48, 0.25);
 }
+
+.confirmProceed:disabled,
+.confirmCancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmError {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+}

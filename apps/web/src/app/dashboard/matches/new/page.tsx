@@ -19,6 +19,8 @@ export default function NewMatchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const [type, setType] = useState<'open' | 'reservation'>('open');
   const [fieldId, setFieldId] = useState('');
   const [sportId, setSportId] = useState('');
@@ -59,9 +61,34 @@ export default function NewMatchPage() {
     if (formats.length > 0) setFormat(formats[0]);
   }, [sportId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function validate(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!date) errs.date = 'Selecciona una fecha';
+    if (!startTime) errs.start_time = 'Ingresa la hora de inicio';
+    if (!endTime) errs.end_time = 'Ingresa la hora de fin';
+    if (startTime && endTime && endTime <= startTime) errs.end_time = 'La hora de fin debe ser después del inicio';
+    if (type === 'open') {
+      if (!pricePerPlayer || Number(pricePerPlayer) <= 0) errs.price_per_player = 'Ingresa un precio válido';
+      if (!minPlayers || Number(minPlayers) < 2) errs.min_players = 'Mínimo 2 jugadores';
+      if (!maxPlayers || Number(maxPlayers) < 2) errs.max_players = 'Mínimo 2 jugadores';
+      if (minPlayers && maxPlayers && Number(maxPlayers) < Number(minPlayers)) errs.max_players = 'El máximo no puede ser menor al mínimo';
+      if (!deadline) errs.deadline = 'Selecciona un plazo de confirmación';
+    } else {
+      if (!totalPrice || Number(totalPrice) <= 0) errs.total_price = 'Ingresa un precio válido';
+    }
+    return errs;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
 
     const fd = new FormData();
@@ -170,17 +197,20 @@ export default function NewMatchPage() {
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="date">Fecha</label>
-              <input id="date" type="date" className={styles.input} value={date} onChange={e => setDate(e.target.value)} required min={new Date().toISOString().slice(0, 10)} />
+              <input id="date" type="date" className={styles.input} value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+              {fieldErrors.date && <span className={styles.fieldError}>{fieldErrors.date}</span>}
             </div>
 
             <div className={styles.twoCol}>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="start_time">Hora inicio</label>
-                <input id="start_time" type="time" className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} required />
+                <input id="start_time" type="time" className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} />
+                {fieldErrors.start_time && <span className={styles.fieldError}>{fieldErrors.start_time}</span>}
               </div>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="end_time">Hora fin</label>
-                <input id="end_time" type="time" className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} required />
+                <input id="end_time" type="time" className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} />
+                {fieldErrors.end_time && <span className={styles.fieldError}>{fieldErrors.end_time}</span>}
               </div>
             </div>
 
@@ -199,30 +229,35 @@ export default function NewMatchPage() {
               <>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="price_per_player">Precio por jugador ($)</label>
-                  <input id="price_per_player" type="number" min="0.01" step="0.01" className={styles.input} value={pricePerPlayer} onChange={e => setPricePerPlayer(e.target.value)} placeholder="8.00" required />
+                  <input id="price_per_player" type="number" min="0.01" step="0.01" className={styles.input} value={pricePerPlayer} onChange={e => setPricePerPlayer(e.target.value)} placeholder="8.00" />
+                  {fieldErrors.price_per_player && <span className={styles.fieldError}>{fieldErrors.price_per_player}</span>}
                 </div>
 
                 <div className={styles.twoCol}>
                   <div className={styles.field}>
                     <label className={styles.label} htmlFor="min_players">Mínimo jugadores</label>
-                    <input id="min_players" type="number" min="2" className={styles.input} value={minPlayers} onChange={e => setMinPlayers(e.target.value)} placeholder="8" required />
+                    <input id="min_players" type="number" min="2" className={styles.input} value={minPlayers} onChange={e => setMinPlayers(e.target.value)} placeholder="8" />
+                    {fieldErrors.min_players && <span className={styles.fieldError}>{fieldErrors.min_players}</span>}
                   </div>
                   <div className={styles.field}>
                     <label className={styles.label} htmlFor="max_players">Máximo jugadores</label>
-                    <input id="max_players" type="number" min="2" className={styles.input} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)} placeholder="10" required />
+                    <input id="max_players" type="number" min="2" className={styles.input} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)} placeholder="10" />
+                    {fieldErrors.max_players && <span className={styles.fieldError}>{fieldErrors.max_players}</span>}
                   </div>
                 </div>
 
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="deadline">Plazo de confirmación</label>
-                  <input id="deadline" type="datetime-local" className={styles.input} value={deadline} onChange={e => setDeadline(e.target.value)} required />
+                  <input id="deadline" type="datetime-local" className={styles.input} value={deadline} onChange={e => setDeadline(e.target.value)} />
+                  {fieldErrors.deadline && <span className={styles.fieldError}>{fieldErrors.deadline}</span>}
                   <p className={styles.hint}>Si no se llega al mínimo antes de esta fecha, el partido se cancela automáticamente.</p>
                 </div>
               </>
             ) : (
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="total_price">Precio total ($)</label>
-                <input id="total_price" type="number" min="0.01" step="0.01" className={styles.input} value={totalPrice} onChange={e => setTotalPrice(e.target.value)} placeholder="80.00" required />
+                <input id="total_price" type="number" min="0.01" step="0.01" className={styles.input} value={totalPrice} onChange={e => setTotalPrice(e.target.value)} placeholder="80.00" />
+                {fieldErrors.total_price && <span className={styles.fieldError}>{fieldErrors.total_price}</span>}
               </div>
             )}
           </div>

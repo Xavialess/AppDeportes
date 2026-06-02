@@ -38,9 +38,9 @@ interface Sport {
 interface Field {
   id: string;
   name: string;
-  address: string;
   images: string[];
   city_id: string;
+  clubs: { id: string; name: string; address: string } | null;
 }
 
 interface Match {
@@ -64,6 +64,28 @@ interface Match {
 
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+interface DayItem {
+  date: string; // YYYY-MM-DD
+  dayName: string;
+  dayNum: number;
+  isToday: boolean;
+}
+
+function generateDays(count = 14): DayItem[] {
+  const result: DayItem[] = [];
+  const today = new Date();
+  for (let i = 0; i < count; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    result.push({
+      date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      dayName: DAYS_ES[d.getDay()],
+      dayNum: d.getDate(),
+      isToday: i === 0,
+    });
+  }
+  return result;
+}
 
 function formatMatchDate(dateStr: string, timeStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -100,21 +122,26 @@ export default function MatchListScreen() {
   const [cities, setCities] = useState<City[]>([]);
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const days = generateDays(14);
 
-  async function fetchMatches(cityId: string | null, sportId: string | null) {
+  async function fetchMatches(cityId: string | null, sportId: string | null, date: string | null = null) {
     setError(null);
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     try {
       let query = supabase
         .from('matches')
         .select(
-          'id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sport_id, sports(id, name, icon), fields!inner(id, name, address, images, city_id)'
+          'id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sport_id, sports(id, name, icon), fields!inner(id, name, images, city_id, clubs(id, name, address))'
         )
-        .eq('status', 'open')
+        .in('status', ['open', 'confirmed', 'en_curso'])
         .eq('is_visible', true)
+        .gte('date', todayStr)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 
@@ -123,6 +150,9 @@ export default function MatchListScreen() {
       }
       if (sportId) {
         query = query.eq('sport_id', sportId);
+      }
+      if (date) {
+        query = query.eq('date', date);
       }
 
       const { data, error: err } = await query;
@@ -155,7 +185,8 @@ export default function MatchListScreen() {
       }));
 
       setMatches(enriched);
-    } catch {
+    } catch (err) {
+      console.error('[fetchMatches]', JSON.stringify(err));
       setError('No se pudieron cargar los partidos. Intenta de nuevo.');
     }
   }
@@ -180,7 +211,7 @@ export default function MatchListScreen() {
       }
       setSelectedCityId(resolvedCityId);
 
-      await fetchMatches(resolvedCityId, null);
+      await fetchMatches(resolvedCityId, null, null);
       setLoading(false);
     }
 
@@ -190,10 +221,10 @@ export default function MatchListScreen() {
 
   useEffect(() => {
     if (!loading) {
-      fetchMatches(selectedCityId, selectedSportId);
+      fetchMatches(selectedCityId, selectedSportId, selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSportId, selectedCityId]);
+  }, [selectedSportId, selectedCityId, selectedDate]);
 
   async function handleCitySelect(cityId: string) {
     setSelectedCityId(cityId);
@@ -203,10 +234,10 @@ export default function MatchListScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchMatches(selectedCityId, selectedSportId);
+    await fetchMatches(selectedCityId, selectedSportId, selectedDate);
     setRefreshing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSportId, selectedCityId]);
+  }, [selectedSportId, selectedCityId, selectedDate]);
 
   const selectedCity = cities.find((c) => c.id === selectedCityId) ?? null;
 
@@ -237,16 +268,27 @@ export default function MatchListScreen() {
             <View style={styles.sportPill}>
               <Text style={styles.cardSport}>{sportLabel}</Text>
             </View>
-            {slotsLeft !== null && slotsLeft > 0 && (
-              <View style={styles.slotsBadge}>
-                <Text style={styles.slotsBadgeText}>{slotsLeft} CUPO{slotsLeft !== 1 ? 'S' : ''}</Text>
-              </View>
+            {slotsLeft !== null && (
+              slotsLeft > 0 ? (
+                <View style={styles.slotsBadge}>
+                  <Text style={styles.slotsBadgeText}>{slotsLeft} CUPO{slotsLeft !== 1 ? 'S' : ''}</Text>
+                </View>
+              ) : (
+                <View style={styles.fullBadge}>
+                  <Text style={styles.fullBadgeText}>LLENO</Text>
+                </View>
+              )
             )}
           </View>
 
           <Text style={styles.cardField} numberOfLines={1}>
-            {item.fields?.name ?? '—'}
+            {item.fields?.clubs?.name ?? item.fields?.name ?? '—'}
           </Text>
+          {item.fields?.name && item.fields?.clubs?.name ? (
+            <Text style={styles.cardFieldSub} numberOfLines={1}>
+              {item.fields.name}
+            </Text>
+          ) : null}
 
           <View style={styles.cardMeta}>
             <Text style={styles.cardMetaText}>{dateLabel}</Text>
@@ -264,6 +306,7 @@ export default function MatchListScreen() {
                     style={[
                       styles.progressFill,
                       { width: `${Math.min(100, (item.enrolled_count / item.max_players) * 100)}%` },
+                      item.enrolled_count >= item.max_players && styles.progressFillFull,
                     ]}
                   />
                 </View>
@@ -316,6 +359,34 @@ export default function MatchListScreen() {
           </View>
         </View>
 
+        {/* Day strip */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.dayStripContainer}
+          contentContainerStyle={styles.dayStripContent}
+        >
+          {days.map((day) => {
+            const active = selectedDate === day.date;
+            return (
+              <TouchableOpacity
+                key={day.date}
+                style={[styles.dayPill, active && styles.dayPillActive]}
+                onPress={() => setSelectedDate(active ? null : day.date)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.dayPillName, active && styles.dayPillNameActive]}>
+                  {day.isToday ? 'HOY' : day.dayName.toUpperCase()}
+                </Text>
+                <Text style={[styles.dayPillNum, active && styles.dayPillNumActive]}>
+                  {day.dayNum}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Sport chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -422,7 +493,9 @@ export default function MatchListScreen() {
               </View>
               <Text style={styles.emptyTitle}>No hay partidos cerca</Text>
               <Text style={styles.emptyText}>
-                {selectedCity
+                {selectedDate
+                  ? 'No hay partidos para este día. Prueba otro día o quita el filtro.'
+                  : selectedCity
                   ? `No hay partidos en ${selectedCity.name} ahora mismo.`
                   : 'Prueba otro deporte o revisa más tarde.'}
               </Text>
@@ -501,6 +574,48 @@ const styles = StyleSheet.create({
     color: colors.accentFg,
   },
 
+  // ---- day strip ----
+  dayStripContainer: {
+    marginBottom: 6,
+  },
+  dayStripContent: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  dayPill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 44,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  dayPillActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  dayPillName: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.dim,
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  dayPillNameActive: {
+    color: colors.accentFg,
+  },
+  dayPillNum: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+  dayPillNumActive: {
+    color: colors.accentFg,
+  },
+
   // ---- sport chips ----
   chipsContainer: {
     marginBottom: spacing.md,
@@ -539,17 +654,17 @@ const styles = StyleSheet.create({
   },
   cardCover: {
     width: '100%',
-    height: 140,
+    height: 90,
     backgroundColor: colors.line,
   },
   cardBody: {
-    padding: spacing.lg,
+    padding: 10,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   sportPill: {
     backgroundColor: 'rgba(212,255,58,0.08)',
@@ -577,16 +692,38 @@ const styles = StyleSheet.create({
     color: colors.accentFg,
     letterSpacing: 0.3,
   },
+  fullBadge: {
+    backgroundColor: colors.errorBg,
+    borderWidth: 1,
+    borderColor: colors.errorBorder,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.badge,
+  },
+  fullBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.error,
+    letterSpacing: 0.3,
+  },
+  progressFillFull: {
+    backgroundColor: colors.error,
+  },
   cardField: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.mute,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
+  },
+  cardFieldSub: {
+    fontSize: 11,
+    color: colors.dim,
+    marginBottom: 2,
   },
   cardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: 6,
   },
   cardMetaText: {
     fontSize: 12,
@@ -604,11 +741,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: colors.line,
-    paddingTop: spacing.md,
-    gap: spacing.md,
+    paddingTop: 8,
+    gap: spacing.sm,
+    marginTop: 4,
   },
   cardPrice: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.accent,
     letterSpacing: -0.4,

@@ -32,10 +32,11 @@ export async function createMatch(formData: FormData): Promise<CreateMatchResult
     return { error: 'La fecha del partido debe ser hoy o en el futuro.' };
   }
 
-  // Verify field ownership
+  // Verify field ownership via clubs join
   const { data: field } = await supabase
-    .from('fields').select('id, owner_id').eq('id', fieldId).single();
-  if (!field || field.owner_id !== user.id) {
+    .from('fields').select('id, clubs(owner_id)').eq('id', fieldId).single();
+  const fieldClub = field?.clubs as { owner_id: string } | null;
+  if (!field || fieldClub?.owner_id !== user.id) {
     return { error: 'No tienes acceso a esta cancha.' };
   }
 

@@ -15,7 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
 import { colors, radius, spacing } from '../../lib/theme';
 
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 
 interface Match {
   id: string;
@@ -34,14 +34,18 @@ interface Match {
 const STATUS_LABELS: Record<MatchStatus, string> = {
   open: 'Abierto',
   confirmed: 'Confirmado',
-  completed: 'Completado',
+  en_curso: 'En curso',
+  jugado: 'Jugado',
+  completed: 'Jugado',
   cancelled: 'Cancelado',
 };
 
 const STATUS_STYLES: Record<MatchStatus, { bg: string; text: string }> = {
   open: { bg: 'rgba(212,255,58,0.1)', text: colors.accent },
   confirmed: { bg: 'rgba(96,165,250,0.1)', text: '#60a5fa' },
-  completed: { bg: 'rgba(255,255,255,0.06)', text: colors.mute },
+  en_curso: { bg: 'rgba(251,191,36,0.12)', text: '#fbbf24' },
+  jugado: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
+  completed: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
   cancelled: { bg: colors.errorBg, text: colors.error },
 };
 
@@ -97,10 +101,13 @@ function MatchCard({ match }: { match: Match }) {
                 style={[
                   styles.enrollFill,
                   { width: `${Math.min((enrolled / max) * 100, 100)}%` as any },
+                  enrolled >= max && styles.enrollFillFull,
                 ]}
               />
             </View>
-            <Text style={styles.enrollCount}>{enrolled} / {max}</Text>
+            <Text style={[styles.enrollCount, enrolled >= max && styles.enrollCountFull]}>
+              {enrolled} / {max}
+            </Text>
           </View>
         )}
 
@@ -126,14 +133,25 @@ export default function OwnerHomeScreen() {
   async function loadMatches() {
     if (!user) return;
     try {
-      const { data: fieldsData, error: fieldsError } = await supabase
-        .from('fields')
+      // Ownership is now via clubs — get owner's club ids first, then field ids
+      const { data: clubsData, error: clubsError } = await supabase
+        .from('clubs')
         .select('id')
         .eq('owner_id', user.id);
 
-      if (fieldsError) throw fieldsError;
+      if (clubsError) throw clubsError;
 
-      const fieldIds = (fieldsData ?? []).map((f: { id: string }) => f.id);
+      const clubIds = (clubsData ?? []).map((c: { id: string }) => c.id);
+
+      const fieldIds: string[] = [];
+      if (clubIds.length > 0) {
+        const { data: fieldsData, error: fieldsError } = await supabase
+          .from('fields')
+          .select('id')
+          .in('club_id', clubIds);
+        if (fieldsError) throw fieldsError;
+        fieldIds.push(...(fieldsData ?? []).map((f: { id: string }) => f.id));
+      }
 
       if (fieldIds.length === 0) {
         setMatches([]);
@@ -332,7 +350,7 @@ const styles = StyleSheet.create({
   },
   cardCover: {
     width: '100%',
-    height: 140,
+    height: 90,
     backgroundColor: colors.line,
   },
   cardBody: {
@@ -414,6 +432,12 @@ const styles = StyleSheet.create({
     color: colors.mute,
     minWidth: 40,
     textAlign: 'right',
+  },
+  enrollCountFull: {
+    color: colors.error,
+  },
+  enrollFillFull: {
+    backgroundColor: colors.error,
   },
   reservationLabel: {
     fontSize: 12,

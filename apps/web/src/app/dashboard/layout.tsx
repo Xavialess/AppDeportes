@@ -14,6 +14,7 @@ interface DashboardLayoutProps {
 const NAV_ITEMS = [
   { icon: '🏠', label: 'Inicio', href: '/dashboard', exact: true },
   { icon: '⚽', label: 'Mis partidos', href: '/dashboard/matches', exact: false },
+  { icon: '🏗️', label: 'Complejos', href: '/dashboard/clubs', exact: false },
   { icon: '🏟️', label: 'Mis canchas', href: '/dashboard/fields', exact: false },
   { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', exact: false },
 ];

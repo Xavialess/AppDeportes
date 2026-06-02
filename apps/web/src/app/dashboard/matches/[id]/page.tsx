@@ -7,15 +7,17 @@ import CancelButton from './CancelButton';
 
 export const metadata: Metadata = { title: 'Detalle del partido — cancha.' };
 
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
 
 const STATUS_LABELS: Record<MatchStatus, string> = {
-  open: 'Abierto', confirmed: 'Confirmado', completed: 'Completado', cancelled: 'Cancelado',
+  open: 'Abierto', confirmed: 'Confirmado', en_curso: 'En curso',
+  jugado: 'Jugado', completed: 'Jugado', cancelled: 'Cancelado',
 };
 const STATUS_CLASS: Record<MatchStatus, string> = {
   open: styles.badgeOpen, confirmed: styles.badgeConfirmed,
-  completed: styles.badgeCompleted, cancelled: styles.badgeCancelled,
+  en_curso: styles.badgeEnCurso, jugado: styles.badgeJugado,
+  completed: styles.badgeJugado, cancelled: styles.badgeCancelled,
 };
 const ENROLL_LABELS: Record<EnrollmentStatus, string> = {
   pending: 'Pendiente', confirmed: 'Confirmado', cancelled: 'Cancelado', refunded: 'Reembolsado',
@@ -44,16 +46,17 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
   const { data: matchRaw } = await supabase
     .from('matches')
-    .select('id, date, start_time, end_time, type, status, format, price_per_player, total_price, min_players, max_players, field_id, sports(name), fields(name, address, owner_id)')
+    .select('id, date, start_time, end_time, type, status, format, price_per_player, total_price, min_players, max_players, field_id, sports(name), fields(name, clubs(name, address, owner_id))')
     .eq('id', id)
     .single();
 
   if (!matchRaw) notFound();
 
-  const field = matchRaw.fields as { name: string; address: string; owner_id: string } | null;
+  const field = matchRaw.fields as { name: string; clubs: { name: string; address: string; owner_id: string } | null } | null;
+  const club = field?.clubs ?? null;
 
-  // Ensure this owner owns this field (admins may bypass)
-  if (profile?.role !== 'admin' && field?.owner_id !== user.id) notFound();
+  // Ensure this owner owns this field via its club (admins may bypass)
+  if (profile?.role !== 'admin' && club?.owner_id !== user.id) notFound();
 
   const { data: enrollmentsRaw } = await supabase
     .from('enrollments')
@@ -73,6 +76,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
   const match = matchRaw as typeof matchRaw & { status: MatchStatus };
   const sport = matchRaw.sports as { name: string } | null;
   const canCancel = match.status === 'open' || match.status === 'confirmed';
+  const showAttendance = match.status === 'confirmed' || match.status === 'en_curso' || match.status === 'jugado' || match.status === 'completed';
 
   return (
     <>
@@ -90,8 +94,9 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
       <div className={styles.detailGrid}>
         <div className={styles.detailCard}>
+          <p className={styles.detailRow}><span className={styles.detailLabel}>Complejo</span> {club?.name ?? '—'}</p>
           <p className={styles.detailRow}><span className={styles.detailLabel}>Cancha</span> {field?.name ?? '—'}</p>
-          {field?.address && <p className={styles.detailRow}><span className={styles.detailLabel}>Dirección</span> {field.address}</p>}
+          {club?.address && <p className={styles.detailRow}><span className={styles.detailLabel}>Dirección</span> {club.address}</p>}
           <p className={styles.detailRow}><span className={styles.detailLabel}>Fecha</span> {fmt(match.date)}</p>
           <p className={styles.detailRow}><span className={styles.detailLabel}>Horario</span> {match.start_time.slice(0, 5)} – {match.end_time.slice(0, 5)}</p>
           {match.type === 'open' && match.price_per_player != null && (
@@ -144,7 +149,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                     ) : (
                       <span className={styles.payBadgePerson}>En persona</span>
                     )}
-                    {(match.status === 'confirmed' || match.status === 'completed') && (
+                    {showAttendance && (
                       <span className={e.attended ? styles.attendedYes : styles.attendedNo}>
                         {e.attended ? '✓ Asistió' : '— No marcado'}
                       </span>

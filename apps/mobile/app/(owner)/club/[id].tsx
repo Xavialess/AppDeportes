@@ -9,28 +9,33 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../lib/supabase';
-import { useSession } from '../../hooks/useSession';
-import { colors, radius, spacing } from '../../lib/theme';
+import { supabase } from '../../../lib/supabase';
+import { useSession } from '../../../hooks/useSession';
+import { colors, radius, spacing } from '../../../lib/theme';
 
 interface Club {
   id: string;
   name: string;
   address: string;
-  images: string[];
-  cities: { name: string } | null;
+  owner_id: string;
 }
 
-function ClubCard({ club }: { club: Club }) {
-  const cover = club.images[0] ?? null;
-  const cityName = club.cities?.name ?? null;
+interface Field {
+  id: string;
+  name: string;
+  images: string[];
+}
+
+function FieldCard({ field }: { field: Field }) {
+  const cover = field.images[0] ?? null;
+  const imageCount = field.images.length;
 
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/club/${club.id}` as any)}
+      onPress={() => router.push(`/my-field/${field.id}` as any)}
       activeOpacity={0.75}
     >
       {cover ? (
@@ -41,60 +46,70 @@ function ClubCard({ club }: { club: Club }) {
         </View>
       )}
       <View style={styles.cardBody}>
-        <Text style={styles.cardName} numberOfLines={1}>{club.name}</Text>
-        {cityName ? (
-          <Text style={styles.cardCity} numberOfLines={1}>{cityName}</Text>
-        ) : null}
-        <Text style={styles.cardAddress} numberOfLines={1}>{club.address}</Text>
+        <Text style={styles.cardName} numberOfLines={1}>{field.name}</Text>
+        <Text style={styles.cardImageCount}>
+          {imageCount === 0 ? 'Sin imágenes' : `${imageCount} foto${imageCount !== 1 ? 's' : ''}`}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-export default function OwnerComplejos() {
+export default function ClubDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user, loading: sessionLoading } = useSession();
-  const [clubs, setClubs] = useState<Club[]>([]);
+  const { user } = useSession();
+
+  const [club, setClub] = useState<Club | null>(null);
+  const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadClubs() {
-    if (!user) return;
+  async function load() {
+    if (!id || !user) return;
     setError(null);
     try {
-      const { data, error: err } = await supabase
-        .from('clubs')
-        .select('id, name, address, images, cities(name)')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+      const [clubRes, fieldsRes] = await Promise.all([
+        supabase
+          .from('clubs')
+          .select('id, name, address, owner_id')
+          .eq('id', id)
+          .eq('owner_id', user.id)
+          .single(),
+        supabase
+          .from('fields')
+          .select('id, name, images')
+          .eq('club_id', id)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (err) throw err;
-      setClubs((data ?? []) as Club[]);
+      if (clubRes.error) throw clubRes.error;
+      if (!clubRes.data) throw new Error('Complejo no encontrado');
+      if (fieldsRes.error) throw fieldsRes.error;
+
+      setClub(clubRes.data as Club);
+      setFields((fieldsRes.data ?? []) as Field[]);
     } catch {
-      setError('No se pudieron cargar los complejos.');
+      setError('No se pudo cargar el complejo.');
     }
   }
 
   useFocusEffect(
     useCallback(() => {
-      if (!sessionLoading && user) {
-        setLoading(true);
-        loadClubs().finally(() => setLoading(false));
-      } else if (!sessionLoading) {
-        setLoading(false);
-      }
+      setLoading(true);
+      load().finally(() => setLoading(false));
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, sessionLoading])
+    }, [id, user?.id])
   );
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadClubs();
+    await load();
     setRefreshing(false);
   }
 
-  if (loading || sessionLoading) {
+  if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.accent} />
@@ -102,15 +117,26 @@ export default function OwnerComplejos() {
     );
   }
 
+  if (!club) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorLabel}>{error ?? 'Complejo no encontrado.'}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.flex}>
       <FlatList
-        data={clubs}
+        data={fields}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ClubCard club={item} />}
+        renderItem={({ item }) => <FieldCard field={item} />}
         contentContainerStyle={[
           styles.listContent,
-          clubs.length === 0 && styles.listEmpty,
+          fields.length === 0 && styles.listEmpty,
         ]}
         refreshControl={
           <RefreshControl
@@ -122,10 +148,16 @@ export default function OwnerComplejos() {
         }
         ListHeaderComponent={
           <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-            <Text style={styles.headerTag}>Panel del propietario</Text>
-            <Text style={styles.headerTitle}>
-              Complejos<Text style={styles.headerDot}>.</Text>
-            </Text>
+            <TouchableOpacity style={styles.backChevron} onPress={() => router.back()} hitSlop={12}>
+              <Text style={styles.backChevronText}>←</Text>
+            </TouchableOpacity>
+            <View style={styles.headerText}>
+              <Text style={styles.headerTag}>Complejo</Text>
+              <Text style={styles.headerTitle} numberOfLines={2}>{club.name}</Text>
+              {club.address ? (
+                <Text style={styles.headerAddress} numberOfLines={1}>{club.address}</Text>
+              ) : null}
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -138,9 +170,9 @@ export default function OwnerComplejos() {
               <View style={styles.emptyIconOuter}>
                 <View style={styles.emptyIconInner} />
               </View>
-              <Text style={styles.emptyTitle}>Sin complejos registrados</Text>
+              <Text style={styles.emptyTitle}>Sin canchas</Text>
               <Text style={styles.emptyText}>
-                Tus complejos deportivos aparecerán aquí. Regístralos desde el panel web.
+                Agrega canchas a este complejo desde el panel web.
               </Text>
             </View>
           )
@@ -161,10 +193,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.bg,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  backChevron: {
+    marginTop: 4,
+    width: 36,
+    height: 36,
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  backChevronText: {
+    fontSize: 18,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  headerText: {
+    flex: 1,
   },
   headerTag: {
     fontSize: 11,
@@ -175,13 +232,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
   },
-  headerDot: {
-    color: colors.accent,
+  headerAddress: {
+    fontSize: 13,
+    color: colors.mute,
+    marginTop: 2,
   },
   listContent: {
     paddingHorizontal: spacing.xl,
@@ -200,11 +259,11 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    height: 160,
+    height: 140,
   },
   cardImagePlaceholder: {
     width: '100%',
-    height: 160,
+    height: 140,
     backgroundColor: colors.card2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -216,23 +275,18 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     padding: spacing.lg,
-    gap: 3,
+    gap: 4,
   },
   cardName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
     letterSpacing: -0.3,
   },
-  cardCity: {
+  cardImageCount: {
     fontSize: 12,
     color: colors.accent,
     fontWeight: '600',
-  },
-  cardAddress: {
-    fontSize: 13,
-    color: colors.mute,
-    fontWeight: '400',
   },
   emptyState: {
     flex: 1,
@@ -284,5 +338,24 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 14,
     fontWeight: '500',
+  },
+  errorLabel: {
+    fontSize: 15,
+    color: colors.error,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  backButton: {
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  backButtonText: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '600',
   },
 });

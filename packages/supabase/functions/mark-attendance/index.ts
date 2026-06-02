@@ -41,7 +41,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Types
 // ---------------------------------------------------------------------------
 
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 type MatchType = 'open' | 'reservation';
 
 interface Match {
@@ -51,8 +51,12 @@ interface Match {
   field_id: string;
 }
 
-interface Field {
+interface FieldClub {
   owner_id: string;
+}
+
+interface Field {
+  clubs: FieldClub | null;
 }
 
 interface AttendanceInput {
@@ -281,9 +285,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: 'Attendance can only be marked for open-type matches' }, 422);
   }
 
-  if (match.status !== 'confirmed' && match.status !== 'completed') {
+  const attendanceAllowedStatuses: MatchStatus[] = ['confirmed', 'en_curso', 'jugado', 'completed'];
+  if (!attendanceAllowedStatuses.includes(match.status)) {
     return jsonResponse({
-      error: `Match status must be 'confirmed' or 'completed' to mark attendance (current: ${match.status})`,
+      error: `Match status must be confirmed, en_curso, jugado, or completed to mark attendance (current: ${match.status})`,
     }, 422);
   }
 
@@ -293,7 +298,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { data: fieldData, error: fieldErr } = await supabase
     .from('fields')
-    .select('owner_id')
+    .select('clubs(owner_id)')
     .eq('id', match.field_id)
     .single();
 
@@ -303,13 +308,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const field = fieldData as Field;
+  const fieldOwnerId = field.clubs?.owner_id ?? null;
 
-  if (field.owner_id !== callerId) {
+  if (fieldOwnerId !== callerId) {
     console.log(JSON.stringify({
       event: 'authorization_failed',
       match_id: matchId,
       caller_id: callerId,
-      field_owner_id: field.owner_id,
+      field_owner_id: fieldOwnerId,
     }));
     return jsonResponse({ error: 'Forbidden — you do not own this field' }, 403);
   }
@@ -351,14 +357,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   );
 
   // -------------------------------------------------------------------------
-  // Mark match as completed (idempotent — guard allows 'confirmed' or 'completed')
+  // Mark match as jugado (idempotent — guard allows all pre-completion statuses)
   // -------------------------------------------------------------------------
 
   const { error: completeErr } = await supabase
     .from('matches')
-    .update({ status: 'completed' satisfies MatchStatus })
+    .update({ status: 'jugado' satisfies MatchStatus })
     .eq('id', matchId)
-    .in('status', ['confirmed', 'completed'] satisfies MatchStatus[]);
+    .in('status', ['confirmed', 'en_curso', 'jugado', 'completed'] satisfies MatchStatus[]);
 
   if (completeErr) {
     console.error(JSON.stringify({ event: 'error', match_id: matchId, error: `match_complete: ${completeErr.message}` }));

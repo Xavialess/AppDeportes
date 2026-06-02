@@ -3,7 +3,7 @@
 export type UserRole = 'player' | 'owner' | 'admin';
 export type SubscriptionStatus = 'active' | 'inactive' | 'trial' | 'cancelled';
 export type MatchType = 'open' | 'reservation';
-export type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+export type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 export type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'in_app' | 'in_person';
 export type PaymentStatus = 'pending' | 'completed' | 'refunded' | 'failed';
@@ -74,14 +74,25 @@ export interface OwnerProfile {
   created_at: string;
 }
 
-export interface Field {
+export interface Club {
   id: string;
   owner_id: string;
   city_id: string;
   name: string;
   address: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  description: string | null;
+  images: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Field {
+  id: string;
+  club_id: string;
+  city_id: string;
+  name: string;
   images: string[];
   created_at: string;
 }
@@ -143,5 +154,13 @@ export interface EnrollmentWithMatch extends Enrollment {
 }
 
 export interface FieldWithCity extends Field {
+  city: City & { country: Country };
+}
+
+export interface FieldWithClub extends Field {
+  club: Club;
+}
+
+export interface ClubWithCity extends Club {
   city: City & { country: Country };
 }

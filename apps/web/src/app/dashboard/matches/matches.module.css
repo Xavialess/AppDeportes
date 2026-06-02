@@ -212,6 +212,16 @@
   color: var(--color-text-muted);
 }
 
+.badgeEnCurso {
+  background: oklch(82% 0.18 80 / 0.12);
+  color: oklch(82% 0.18 80);
+}
+
+.badgeJugado {
+  background: oklch(72% 0.18 155 / 0.12);
+  color: oklch(72% 0.18 155);
+}
+
 .badgeCancelled {
   background: oklch(60% 0.22 25 / 0.12);
   color: oklch(60% 0.22 25);

@@ -1,14 +1,23 @@
 /*
  * Edge Function: auto-cancel-matches
  *
- * Cancels open matches that did not reach their minimum player count by the
- * confirmation deadline and marks all active enrollments as refunded.
+ * Cancels open matches in two cases:
+ *
+ *   1. Deadline-based: type='open', status='open', confirmation_deadline < NOW(),
+ *      enrolled_count < min_players. These never reached the minimum before their
+ *      deadline and can no longer be confirmed.
+ *
+ *   2. Kickoff-based: status='open', kickoff datetime (date + start_time in
+ *      America/Guayaquil) < NOW(). The match start time has passed and it was
+ *      never confirmed, so it cannot be played.
+ *
+ * Both cases cancel the match, mark active enrollments as refunded, and log
+ * payment IDs for the payment provider (TBD).
  *
  * Business rules:
- *   - Only targets matches where type='open', status='open', confirmation_deadline < NOW()
- *   - Cancels if enrolled_count < min_players
  *   - System cancellation: cancelled_by remains NULL — owner penalty counter NOT incremented
- *   - Refunds are mocked (payment provider TBD); payment IDs are logged for audit
+ *   - Kickoff-based cancellations skip the min_players check (time has passed regardless)
+ *   - Idempotent: concurrent runs are safe (update guarded by .eq('status', 'open'))
  *
  * Schedule — configure once in Supabase Dashboard → Database → pg_cron:
  *
@@ -32,7 +41,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Types
 // ---------------------------------------------------------------------------
 
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
 
 interface EligibleMatch {
@@ -46,7 +55,7 @@ interface Enrollment {
 }
 
 type MatchResult =
-  | { match_id: string; action: 'cancelled'; enrolled_count: number; refunds_queued: number }
+  | { match_id: string; action: 'cancelled'; reason: string; enrolled_count: number; refunds_queued: number }
   | { match_id: string; action: 'skipped'; reason: string }
   | { match_id: string; action: 'error'; error: string };
 
@@ -80,12 +89,12 @@ function getErrorMessage(err: unknown): string {
 async function processMatch(
   supabase: ReturnType<typeof createClient>,
   match: EligibleMatch,
+  cancellationReason: string,
+  skipMinPlayersCheck = false,
 ): Promise<MatchResult> {
   const { id: matchId, min_players: minPlayers } = match;
 
   try {
-    // Fetch active enrollments. We do this inside per-match processing so one
-    // bad match cannot abort the entire batch.
     const { data: enrollments, error: enrollErr } = await supabase
       .from('enrollments')
       .select('id, payment_id')
@@ -98,8 +107,7 @@ async function processMatch(
 
     const enrolledCount = enrollments?.length ?? 0;
 
-    if (enrolledCount >= (minPlayers ?? 0)) {
-      // Min players reached — do NOT cancel. APPD-24 handles auto-confirm.
+    if (!skipMinPlayersCheck && enrolledCount >= (minPlayers ?? 0)) {
       const result: MatchResult = {
         match_id: matchId,
         action: 'skipped',
@@ -109,25 +117,22 @@ async function processMatch(
       return result;
     }
 
-    // Idempotent update: guard with .eq('status', 'open') so a concurrent run
-    // that already cancelled this match produces a no-op instead of an error.
+    // Idempotency guard: if already cancelled by a concurrent run, this is a no-op.
     const { error: cancelErr } = await supabase
       .from('matches')
       .update({
         status: 'cancelled' satisfies MatchStatus,
-        cancellation_reason: 'Mínimo de jugadores no alcanzado antes del plazo',
+        cancellation_reason: cancellationReason,
         enrolled_count_at_cancellation: enrolledCount,
-        // cancelled_by intentionally omitted — NULL means system cancellation.
-        // DB trigger only increments owner cancellation_count when cancelled_by IS NOT NULL.
+        // cancelled_by intentionally omitted — NULL = system cancellation.
       })
       .eq('id', matchId)
-      .eq('status', 'open' satisfies MatchStatus); // idempotency guard
+      .eq('status', 'open' satisfies MatchStatus);
 
     if (cancelErr) {
       throw new Error(`match update: ${cancelErr.message}`);
     }
 
-    // Mark enrollments as refunded — also idempotent (in() filters only active rows).
     const { error: refundErr } = await supabase
       .from('enrollments')
       .update({ status: 'refunded' satisfies EnrollmentStatus })
@@ -138,7 +143,6 @@ async function processMatch(
       throw new Error(`enrollment refund: ${refundErr.message}`);
     }
 
-    // Mock refund — log payment IDs for the payment provider (to be wired in APPD-2x).
     const activeEnrollments = (enrollments ?? []) as Enrollment[];
     for (const enrollment of activeEnrollments) {
       if (enrollment.payment_id) {
@@ -147,7 +151,6 @@ async function processMatch(
           match_id: matchId,
           enrollment_id: enrollment.id,
           payment_id: enrollment.payment_id,
-          note: 'refund would be triggered for payment_id: ' + enrollment.payment_id,
         }));
       }
     }
@@ -155,14 +158,15 @@ async function processMatch(
     console.log(JSON.stringify({
       event: 'match_cancelled',
       match_id: matchId,
+      cancellation_reason: cancellationReason,
       enrolled_count: enrolledCount,
-      min_players: minPlayers,
       refunds_queued: activeEnrollments.filter(e => e.payment_id).length,
     }));
 
     return {
       match_id: matchId,
       action: 'cancelled',
+      reason: cancellationReason,
       enrolled_count: enrolledCount,
       refunds_queued: activeEnrollments.filter(e => e.payment_id).length,
     };
@@ -178,7 +182,6 @@ async function processMatch(
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  // Health check — useful for cron pings and uptime monitors.
   const url = new URL(req.url);
   if (url.searchParams.get('health') === '1') {
     return jsonResponse({ status: 'ok' });
@@ -194,32 +197,63 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  // Fetch all matches past their deadline that are still open.
-  const { data: matches, error: fetchError } = await supabase
+  // ── Batch 1: past-deadline matches ──────────────────────────────────────
+  const { data: deadlineData, error: deadlineErr } = await supabase
     .from('matches')
     .select('id, min_players')
     .eq('type', 'open')
     .eq('status', 'open')
     .lt('confirmation_deadline', new Date().toISOString());
 
-  if (fetchError) {
-    console.error(JSON.stringify({ event: 'error', error: `fetch_matches: ${fetchError.message}` }));
-    return jsonResponse({ error: fetchError.message }, 500);
+  if (deadlineErr) {
+    console.error(JSON.stringify({ event: 'error', error: `fetch_deadline: ${deadlineErr.message}` }));
+    return jsonResponse({ error: deadlineErr.message }, 500);
   }
 
-  const eligibleMatches = (matches ?? []) as EligibleMatch[];
-  console.log(JSON.stringify({ event: 'job_start', eligible_count: eligibleMatches.length }));
+  // ── Batch 2: past-kickoff matches ────────────────────────────────────────
+  // Uses an RPC that compares date+start_time at America/Guayaquil against now().
+  const { data: kickoffData, error: kickoffErr } = await supabase
+    .rpc('get_past_kickoff_open_matches');
 
-  // Process matches independently — one failure does not abort the rest.
-  const results = await Promise.all(
-    eligibleMatches.map(match => processMatch(supabase, match)),
+  if (kickoffErr) {
+    console.error(JSON.stringify({ event: 'error', error: `fetch_kickoff: ${kickoffErr.message}` }));
+    return jsonResponse({ error: kickoffErr.message }, 500);
+  }
+
+  // Deduplicate: a match may appear in both batches (deadline passed AND kickoff
+  // passed). Process each match once; kickoff batch covers the remainder.
+  const deadlineMatches = (deadlineData ?? []) as EligibleMatch[];
+  const deadlineIds = new Set(deadlineMatches.map((m) => m.id));
+  const kickoffMatches = ((kickoffData ?? []) as EligibleMatch[]).filter(
+    (m) => !deadlineIds.has(m.id),
   );
+
+  console.log(JSON.stringify({
+    event: 'job_start',
+    deadline_count: deadlineMatches.length,
+    kickoff_count: kickoffMatches.length,
+  }));
+
+  const [deadlineResults, kickoffResults] = await Promise.all([
+    Promise.all(
+      deadlineMatches.map((m) =>
+        processMatch(supabase, m, 'Mínimo de jugadores no alcanzado antes del plazo')
+      ),
+    ),
+    Promise.all(
+      kickoffMatches.map((m) =>
+        processMatch(supabase, m, 'Partido no iniciado — hora de inicio superada', true)
+      ),
+    ),
+  ]);
+
+  const results = [...deadlineResults, ...kickoffResults];
 
   const summary: JobSummary = {
     processed: results.length,
-    cancelled: results.filter(r => r.action === 'cancelled').length,
-    skipped: results.filter(r => r.action === 'skipped').length,
-    errors: results.filter(r => r.action === 'error').length,
+    cancelled: results.filter((r) => r.action === 'cancelled').length,
+    skipped: results.filter((r) => r.action === 'skipped').length,
+    errors: results.filter((r) => r.action === 'error').length,
     results,
   };
 

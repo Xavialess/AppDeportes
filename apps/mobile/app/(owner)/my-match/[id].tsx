@@ -13,7 +13,7 @@ import { supabase } from '../../../lib/supabase';
 import { colors, radius, spacing } from '../../../lib/theme';
 import { formatPrice } from '../../../lib/format';
 
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
 
 interface MatchDetail {
@@ -31,7 +31,7 @@ interface MatchDetail {
   price_per_player: number | null;
   total_price: number | null;
   sports: { name: string } | null;
-  fields: { name: string; address: string } | null;
+  fields: { name: string; clubs: { name: string; address: string } | null } | null;
 }
 
 interface EnrolledUser {
@@ -51,14 +51,18 @@ interface Enrollment {
 const STATUS_LABELS: Record<MatchStatus, string> = {
   open: 'Abierto',
   confirmed: 'Confirmado',
-  completed: 'Completado',
+  en_curso: 'En curso',
+  jugado: 'Jugado',
+  completed: 'Jugado',
   cancelled: 'Cancelado',
 };
 
 const STATUS_STYLES: Record<MatchStatus, { bg: string; text: string }> = {
   open: { bg: 'rgba(212,255,58,0.1)', text: colors.accent },
   confirmed: { bg: 'rgba(96,165,250,0.1)', text: '#60a5fa' },
-  completed: { bg: 'rgba(255,255,255,0.06)', text: colors.mute },
+  en_curso: { bg: 'rgba(251,191,36,0.12)', text: '#fbbf24' },
+  jugado: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
+  completed: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
   cancelled: { bg: colors.errorBg, text: colors.error },
 };
 
@@ -117,7 +121,7 @@ export default function OwnerMatchDetailScreen() {
       const [matchRes, enrollmentsRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('id, date, start_time, end_time, status, type, is_visible, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, address)')
+          .select('id, date, start_time, end_time, status, type, is_visible, max_players, min_players, format, price_per_player, total_price, sports(name), fields(name, clubs(name, address))')
           .eq('id', id)
           .single(),
         supabase
@@ -188,7 +192,7 @@ export default function OwnerMatchDetailScreen() {
 
               if (updateError) throw updateError;
 
-              setMatch((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+              setMatch((prev) => (prev ? { ...prev, status: 'jugado' } : prev));
             } catch {
               Alert.alert('Error', 'No se pudo completar el partido. Intenta de nuevo.');
             } finally {
@@ -304,7 +308,7 @@ export default function OwnerMatchDetailScreen() {
   }
 
   const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
-  const canMarkAttendance = match.status === 'confirmed' || match.status === 'completed';
+  const canMarkAttendance = match.status === 'confirmed' || match.status === 'en_curso' || match.status === 'jugado' || match.status === 'completed';
   const canComplete = match.status === 'confirmed';
   const canCancel = match.status === 'open' || match.status === 'confirmed';
   const enrolled = match.enrolled_count ?? enrollments.length;
@@ -327,7 +331,7 @@ export default function OwnerMatchDetailScreen() {
               </Text>
               <Text style={styles.matchField}>
                 {match.fields?.name ?? ''}
-                {match.fields?.address ? ` · ${match.fields.address}` : ''}
+                {match.fields?.clubs?.address ? ` · ${match.fields.clubs.address}` : ''}
               </Text>
               <Text style={styles.matchDate}>
                 {formatDate(match.date)} · {match.start_time.slice(0, 5)}–{match.end_time.slice(0, 5)}

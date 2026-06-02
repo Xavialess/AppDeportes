@@ -67,11 +67,16 @@ export default async function PlanPage() {
   const ownerProfile = ownerProfileRaw as OwnerProfile | null;
   const currentPlan = ownerProfile?.plans ?? null;
 
-  // Fetch owner's fields to derive match count
-  const { data: fieldsData } = await supabase
-    .from('fields')
+  // Fetch owner's fields via clubs to derive match count
+  const { data: ownerClubs } = await supabase
+    .from('clubs')
     .select('id')
     .eq('owner_id', user.id);
+  const planClubIds = (ownerClubs ?? []).map(c => c.id);
+
+  const { data: fieldsData } = planClubIds.length > 0
+    ? await supabase.from('fields').select('id').in('club_id', planClubIds)
+    : { data: [] };
 
   const fieldIds = (fieldsData ?? []).map((f) => f.id);
 

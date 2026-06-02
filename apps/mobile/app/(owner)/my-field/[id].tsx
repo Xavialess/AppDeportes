@@ -21,8 +21,8 @@ import { colors, radius, spacing } from '../../../lib/theme';
 interface Field {
   id: string;
   name: string;
-  address: string;
   images: string[];
+  clubs: { name: string; address: string } | null;
 }
 
 const THUMB_SIZE = (Dimensions.get('window').width - spacing.xl * 2 - spacing.md) / 2;
@@ -52,9 +52,8 @@ export default function FieldDetailScreen() {
     try {
       const { data, error: err } = await supabase
         .from('fields')
-        .select('id, name, address, images')
+        .select('id, name, images, clubs(name, address)')
         .eq('id', id)
-        .eq('owner_id', user.id)
         .single();
 
       if (err) throw err;
@@ -215,7 +214,9 @@ export default function FieldDetailScreen() {
           <View style={styles.headerText}>
             <Text style={styles.headerTag}>Gestionar cancha</Text>
             <Text style={styles.headerTitle} numberOfLines={1}>{field.name}</Text>
-            <Text style={styles.headerAddress} numberOfLines={1}>{field.address}</Text>
+            {field.clubs?.address ? (
+              <Text style={styles.headerAddress} numberOfLines={1}>{field.clubs.address}</Text>
+            ) : null}
           </View>
         </View>
 

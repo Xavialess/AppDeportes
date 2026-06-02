@@ -18,7 +18,7 @@ import SkeletonCard from '../../components/SkeletonCard';
 // ---- types ---------------------------------------------------------------
 
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 
 interface SportRef {
   name: string;
@@ -27,7 +27,7 @@ interface SportRef {
 
 interface FieldRef {
   name: string;
-  address: string;
+  clubs: { name: string; address: string } | null;
 }
 
 interface MatchRef {
@@ -70,18 +70,11 @@ function isUpcoming(enrollment: Enrollment): boolean {
 }
 
 function sortEnrollments(enrollments: Enrollment[]): Enrollment[] {
-  const order: Record<EnrollmentStatus, number> = {
-    pending: 0,
-    confirmed: 1,
-    cancelled: 2,
-    refunded: 3,
-  };
   return [...enrollments].sort((a, b) => {
-    const statusDiff = order[a.status] - order[b.status];
-    if (statusDiff !== 0) return statusDiff;
-    const dateA = a.matches?.date ?? '';
-    const dateB = b.matches?.date ?? '';
-    return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+    const dateA = `${a.matches?.date ?? ''}T${a.matches?.start_time ?? ''}`;
+    const dateB = `${b.matches?.date ?? ''}T${b.matches?.start_time ?? ''}`;
+    // Most recent first
+    return dateA > dateB ? -1 : dateA < dateB ? 1 : 0;
   });
 }
 
@@ -121,7 +114,7 @@ export default function MyMatchesScreen() {
       const { data, error: err } = await supabase
         .from('enrollments')
         .select(
-          'id, status, match_id, matches(id, date, start_time, end_time, status, type, format, price_per_player, sports(name, icon), fields(name, address))'
+          'id, status, match_id, matches(id, date, start_time, end_time, status, type, format, price_per_player, sports(name, icon), fields(name, clubs(name, address)))'
         )
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -183,7 +176,7 @@ export default function MyMatchesScreen() {
         </View>
 
         <Text style={styles.cardField} numberOfLines={1}>
-          {match.fields?.name ?? '—'}
+          {match.fields?.clubs?.name ?? match.fields?.name ?? '—'}
         </Text>
 
         <View style={styles.cardMeta}>

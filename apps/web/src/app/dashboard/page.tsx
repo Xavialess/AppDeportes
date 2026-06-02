@@ -23,11 +23,16 @@ export default async function DashboardPage() {
 
   const firstName = profile?.name?.split(' ')[0] ?? 'Propietario';
 
-  // Fetch owner's field IDs
-  const { data: fieldsData } = await supabase
-    .from('fields')
+  // Fetch owner's field IDs via clubs
+  const { data: clubsOwned } = await supabase
+    .from('clubs')
     .select('id')
     .eq('owner_id', user.id);
+  const ownedClubIds = (clubsOwned ?? []).map(c => c.id);
+
+  const { data: fieldsData } = ownedClubIds.length > 0
+    ? await supabase.from('fields').select('id').in('club_id', ownedClubIds)
+    : { data: [] };
 
   const fieldIds = (fieldsData ?? []).map((f) => f.id);
   const fieldsCount = fieldIds.length;

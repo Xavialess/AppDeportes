@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { createMatch } from './actions';
 import styles from './new-match.module.css';
 
-interface Field { id: string; name: string; address: string }
+interface Field { id: string; name: string; clubs: { name: string } | null }
 interface Sport { id: string; name: string; formats: string[] }
 
 export default function NewMatchPage() {
@@ -43,10 +43,18 @@ export default function NewMatchPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      const [{ data: fieldsData }, { data: sportsData }] = await Promise.all([
-        supabase.from('fields').select('id, name, address').eq('owner_id', user.id),
+      // Fetch owner's clubs first, then their fields
+      const { data: clubsData } = await supabase
+        .from('clubs').select('id').eq('owner_id', user.id);
+      const clubIds = (clubsData ?? []).map((c: { id: string }) => c.id);
+
+      const [fieldsResult, { data: sportsData }] = await Promise.all([
+        clubIds.length > 0
+          ? supabase.from('fields').select('id, name, clubs(name)').in('club_id', clubIds)
+          : Promise.resolve({ data: [] as Field[] }),
         supabase.from('sports').select('id, name, formats').eq('is_active', true).order('name'),
       ]);
+      const fieldsData = fieldsResult.data as Field[] | null;
       setFields(fieldsData ?? []);
       setSports(sportsData ?? []);
       if (fieldsData?.[0]) setFieldId(fieldsData[0].id);
@@ -177,7 +185,11 @@ export default function NewMatchPage() {
             <div className={styles.field}>
               <label className={styles.label} htmlFor="field_id">Cancha</label>
               <select id="field_id" className={styles.select} value={fieldId} onChange={e => setFieldId(e.target.value)} required>
-                {fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                {fields.map(f => (
+                  <option key={f.id} value={f.id}>
+                    {f.clubs?.name ? `${f.clubs.name} — ` : ''}{f.name}
+                  </option>
+                ))}
               </select>
             </div>
 

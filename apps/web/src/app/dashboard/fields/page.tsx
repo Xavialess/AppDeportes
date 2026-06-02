@@ -22,11 +22,21 @@ export default async function FieldsPage() {
     redirect('/login?error=unauthorized');
   }
 
-  const { data: fields } = await supabase
-    .from('fields')
-    .select('id, name, address, cities(name)')
-    .eq('owner_id', user.id)
-    .order('name');
+  // Ownership is now via clubs — fetch the owner's clubs first, then their fields
+  const { data: clubs } = await supabase
+    .from('clubs')
+    .select('id')
+    .eq('owner_id', user.id);
+
+  const clubIds = (clubs ?? []).map(c => c.id);
+
+  const { data: fields } = clubIds.length > 0
+    ? await supabase
+        .from('fields')
+        .select('id, name, club_id, clubs(id, name, address), cities(name)')
+        .in('club_id', clubIds)
+        .order('name')
+    : { data: [] };
 
   // Fetch active match counts per field
   const fieldIds = (fields ?? []).map(f => f.id);
@@ -50,21 +60,22 @@ export default async function FieldsPage() {
           <span className={styles.pageTag}>Gestión</span>
           <h1 className={styles.pageTitle}>Mis Canchas</h1>
         </div>
-        <Link href="/dashboard/fields/new" className={styles.addBtn}>
-          + Registrar cancha
+        <Link href="/dashboard/clubs" className={styles.addBtn}>
+          Gestionar complejos →
         </Link>
       </header>
 
       {fields && fields.length > 0 ? (
         <ul className={styles.list} role="list">
           {fields.map((field) => {
+            const club = field.clubs as { id: string; name: string; address: string } | null;
             const city = field.cities as { name: string } | null;
             return (
               <li key={field.id}>
                 <Link href={`/dashboard/fields/${field.id}`} className={styles.card} style={{ display: 'block', textDecoration: 'none' }}>
                   <div className={styles.cardName}>{field.name}</div>
                   <div className={styles.cardMeta}>
-                    {field.address}
+                    {club?.name ?? ''}
                     {city ? ` · ${city.name}` : ''}
                   </div>
                   <div className={styles.cardStats}>
@@ -82,10 +93,10 @@ export default async function FieldsPage() {
           <div className={styles.emptyIcon}>🏟️</div>
           <p className={styles.emptyTitle}>Sin canchas registradas</p>
           <p className={styles.emptyText}>
-            Registra tu primera cancha para empezar a publicar partidos.
+            Primero crea un complejo y luego agrega canchas desde su página de detalle.
           </p>
-          <Link href="/dashboard/fields/new" className={styles.addBtn}>
-            + Registrar cancha
+          <Link href="/dashboard/clubs/new" className={styles.addBtn}>
+            + Registrar complejo
           </Link>
         </div>
       )}

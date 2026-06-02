@@ -18,10 +18,13 @@ import { formatPrice } from '../../../lib/format';
 
 type PaymentMethod = 'in_person' | 'in_app';
 
+type EnrollableStatus = 'open' | 'confirmed' | 'en_curso';
+
 interface MatchSummary {
   id: string;
   date: string;
   start_time: string;
+  status: string;
   price_per_player: number | null;
   max_players: number | null;
   enrolled_count: number;
@@ -66,7 +69,7 @@ export default function EnrollScreen() {
     try {
       const { data, error: matchErr } = await supabase
         .from('matches')
-        .select('id, date, start_time, price_per_player, max_players, sport_id, sports(name), fields(name)')
+        .select('id, date, start_time, status, price_per_player, max_players, sport_id, sports(name), fields(name)')
         .eq('id', id)
         .single();
 
@@ -76,6 +79,7 @@ export default function EnrollScreen() {
         id: string;
         date: string;
         start_time: string;
+        status: string;
         price_per_player: number | null;
         max_players: number | null;
         sports: { name: string } | null;
@@ -92,6 +96,7 @@ export default function EnrollScreen() {
         id: raw.id,
         date: raw.date,
         start_time: raw.start_time,
+        status: raw.status,
         price_per_player: raw.price_per_player,
         max_players: raw.max_players,
         enrolled_count: enrollCount ?? 0,
@@ -110,6 +115,18 @@ export default function EnrollScreen() {
     if (!user?.id || !id) return;
     if (!matchSummary) return;
 
+    const enrollableStatuses: EnrollableStatus[] = ['open', 'confirmed', 'en_curso'];
+    if (!enrollableStatuses.includes(matchSummary.status as EnrollableStatus)) {
+      setErrorMessage('Este partido ya no acepta inscripciones.');
+      return;
+    }
+    if (matchSummary.status !== 'en_curso') {
+      const kickoff = new Date(`${matchSummary.date}T${matchSummary.start_time}`);
+      if (kickoff <= new Date()) {
+        setErrorMessage('Este partido ya comenzó.');
+        return;
+      }
+    }
     if (matchSummary.max_players != null && matchSummary.enrolled_count >= matchSummary.max_players) {
       setErrorMessage('Lo sentimos, el partido se ha llenado.');
       return;

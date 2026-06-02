@@ -25,7 +25,7 @@ type ActivePicker = 'date' | 'startTime' | 'endTime' | 'deadlineDate' | 'deadlin
 interface Field {
   id: string;
   name: string;
-  address: string;
+  clubs: { name: string } | null;
 }
 
 interface Sport {
@@ -104,10 +104,20 @@ export default function PostMatchScreen() {
     if (!user) return;
     async function loadData() {
       try {
-        const [fieldsRes, sportsRes] = await Promise.all([
-          supabase.from('fields').select('id, name, address').eq('owner_id', user!.id),
+        const [clubsRes, sportsRes] = await Promise.all([
+          supabase.from('clubs').select('id').eq('owner_id', user!.id),
           supabase.from('sports').select('id, name, formats').eq('is_active', true),
         ]);
+
+        if (clubsRes.error) throw clubsRes.error;
+        const clubIds = (clubsRes.data ?? []).map((c: { id: string }) => c.id);
+
+        const fieldsRes = clubIds.length > 0
+          ? await supabase
+              .from('fields')
+              .select('id, name, clubs(name)')
+              .in('club_id', clubIds)
+          : { data: [], error: null };
 
         if (fieldsRes.error) throw fieldsRes.error;
         if (sportsRes.error) throw sportsRes.error;
@@ -357,7 +367,9 @@ export default function PostMatchScreen() {
             </TouchableOpacity>
             <View style={styles.pickerValue}>
               <Text style={styles.pickerValueText} numberOfLines={1}>{fields[fieldIndex]?.name ?? '—'}</Text>
-              <Text style={styles.pickerValueSub} numberOfLines={1}>{fields[fieldIndex]?.address ?? ''}</Text>
+              {fields[fieldIndex]?.clubs?.name ? (
+                <Text style={styles.pickerValueSub} numberOfLines={1}>{fields[fieldIndex].clubs!.name}</Text>
+              ) : null}
             </View>
             <TouchableOpacity
               style={styles.pickerArrow}

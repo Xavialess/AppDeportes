@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
   Image,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
@@ -27,8 +28,8 @@ interface Sport {
 interface Field {
   id: string;
   name: string;
-  address: string;
   city_id: string;
+  clubs: { name: string; address: string } | null;
 }
 
 interface MatchDetail {
@@ -38,7 +39,7 @@ interface MatchDetail {
   end_time: string;
   format: string;
   type: 'open' | 'reservation';
-  status: 'open' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
   price_per_player: number | null;
   min_players: number | null;
   max_players: number | null;
@@ -79,15 +80,28 @@ function formatDeadlineDetail(deadlineStr: string | null): { label: string; expi
   return { label: `Cierra en ${diffMins} minutos`, expired: false };
 }
 
+const ENROLLABLE_STATUSES = ['open', 'confirmed', 'en_curso'] as const;
+
 function canEnroll(match: MatchDetail, isEnrolled: boolean): { allowed: boolean; reason: string | null } {
-  if (match.status !== 'open') return { allowed: false, reason: 'Este partido ya no está disponible.' };
-  if (isEnrolled) return { allowed: false, reason: null };
-  if (match.confirmation_deadline) {
-    const deadline = new Date(match.confirmation_deadline);
-    if (deadline <= new Date()) return { allowed: false, reason: 'El plazo de inscripción ha cerrado.' };
+  if (!ENROLLABLE_STATUSES.includes(match.status as typeof ENROLLABLE_STATUSES[number])) {
+    return { allowed: false, reason: 'Este partido ya no acepta inscripciones.' };
   }
+  // If the match hasn't transitioned to en_curso yet but kickoff already passed,
+  // block enrollment — the auto-cancel cron may not have run yet (up to 5 min lag).
+  if (match.status !== 'en_curso') {
+    const kickoff = new Date(`${match.date}T${match.start_time}`);
+    if (kickoff <= new Date()) {
+      return { allowed: false, reason: 'Este partido ya comenzó.' };
+    }
+  }
+  if (isEnrolled) return { allowed: false, reason: null };
   if (match.max_players != null && match.enrolled_count >= match.max_players) {
     return { allowed: false, reason: 'El partido está lleno.' };
+  }
+  // Deadline only blocks new enrollments when match is still open (not yet confirmed/in-progress)
+  if (match.status === 'open' && match.confirmation_deadline) {
+    const deadline = new Date(match.confirmation_deadline);
+    if (deadline <= new Date()) return { allowed: false, reason: 'El plazo de inscripción ha cerrado.' };
   }
   return { allowed: true, reason: null };
 }
@@ -100,6 +114,9 @@ export default function MatchDetailScreen() {
 
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
+  const [players, setPlayers] = useState<{ id: string; name: string | null }[]>([]);
+  const [withdrawing, setWithdrawing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [heroUrl, setHeroUrl] = useState<string | null>(null);
@@ -108,7 +125,7 @@ export default function MatchDetailScreen() {
     if (!id) return;
     loadMatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, user?.id]);
 
   async function loadMatch() {
     setLoading(true);
@@ -116,7 +133,7 @@ export default function MatchDetailScreen() {
     try {
       const { data, error: matchErr } = await supabase
         .from('matches')
-        .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sports(id, name, icon), fields(id, name, address, city_id)')
+        .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sports(id, name, icon), fields(id, name, city_id, clubs(name, address))')
         .eq('id', id)
         .single();
 
@@ -161,11 +178,71 @@ export default function MatchDetailScreen() {
           .in('status', ['pending', 'confirmed'])
           .maybeSingle();
         setIsEnrolled(!!enrollRow);
+        setEnrollmentId(enrollRow?.id ?? null);
       }
+
+      // Fetch enrolled players (visible after RLS migration 21)
+      const { data: enrollmentsData } = await supabase
+        .from('enrollments')
+        .select('user_id, users(id, name)')
+        .eq('match_id', id)
+        .in('status', ['pending', 'confirmed']);
+
+      setPlayers(
+        (enrollmentsData ?? []).map((e: any) => ({
+          id: e.user_id,
+          name: e.users?.name ?? null,
+        }))
+      );
     } catch {
       setError('No se pudo cargar el partido. Intenta de nuevo.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function confirmWithdraw() {
+    Alert.alert(
+      'Retirarte del partido',
+      '¿Seguro que quieres retirarte? Tu lugar quedará libre para otro jugador.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sí, retirarme', style: 'destructive', onPress: handleWithdraw },
+      ],
+    );
+  }
+
+  async function handleWithdraw() {
+    if (!enrollmentId) return;
+    setWithdrawing(true);
+    try {
+      const { error: err } = await supabase
+        .from('enrollments')
+        .update({ status: 'cancelled' })
+        .eq('id', enrollmentId)
+        .eq('user_id', user!.id);
+
+      if (err) throw err;
+
+      // Stub: reimbursement will be processed by the payment provider
+      // TODO: trigger refund via payment Edge Function when payments are live
+
+      setIsEnrolled(false);
+      setEnrollmentId(null);
+      setMatch((prev) =>
+        prev ? { ...prev, enrolled_count: Math.max(0, prev.enrolled_count - 1) } : prev,
+      );
+      setPlayers((prev) => prev.filter((p) => p.id !== user?.id));
+
+      Alert.alert(
+        'Retiro confirmado',
+        'Te has retirado del partido. Si realizaste un pago, será reembolsado a la brevedad.',
+        [{ text: 'OK' }],
+      );
+    } catch {
+      Alert.alert('Error', 'No se pudo procesar el retiro. Intenta de nuevo.');
+    } finally {
+      setWithdrawing(false);
     }
   }
 
@@ -199,6 +276,9 @@ export default function MatchDetailScreen() {
 
   const isFull = match.max_players != null && match.enrolled_count >= match.max_players;
   const isCancelled = match.status === 'cancelled';
+  const isPast = match.status === 'jugado' || match.status === 'completed' ||
+    (match.status !== 'en_curso' && new Date(`${match.date}T${match.start_time}`) < new Date());
+  const canWithdraw = isEnrolled && (match.status === 'open' || match.status === 'confirmed');
 
   return (
     <View style={styles.container}>
@@ -262,8 +342,8 @@ export default function MatchDetailScreen() {
         {/* Info rows */}
         <View style={styles.infoCard}>
           <InfoRow label="CANCHA" value={match.fields?.name ?? '—'} />
-          {match.fields?.address ? (
-            <InfoRow label="DIRECCIÓN" value={match.fields.address} />
+          {match.fields?.clubs?.address ? (
+            <InfoRow label="DIRECCIÓN" value={match.fields.clubs.address} />
           ) : null}
           <Divider />
           <InfoRow label="FECHA" value={formatFullDate(match.date)} />
@@ -302,21 +382,61 @@ export default function MatchDetailScreen() {
             valueStyle={deadlineExpired ? styles.valueExpired : undefined}
           />
         </View>
+
+        {/* Enrolled players */}
+        {players.length > 0 && (
+          <View style={styles.playersSection}>
+            <Text style={styles.playersSectionTitle}>
+              Jugadores inscritos · {players.length}
+            </Text>
+            <View style={styles.playersList}>
+              {players.map((p) => {
+                const initials = p.name
+                  ? p.name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
+                  : '?';
+                const firstName = p.name?.split(' ')[0] ?? 'Jugador';
+                return (
+                  <View key={p.id} style={styles.playerItem}>
+                    <View style={[styles.playerAvatar, p.id === user?.id && styles.playerAvatarSelf]}>
+                      <Text style={styles.playerAvatarText}>{initials}</Text>
+                    </View>
+                    <Text style={styles.playerName} numberOfLines={1}>
+                      {firstName}{p.id === user?.id ? ' (tú)' : ''}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Bottom enroll bar */}
+      {/* Bottom bar */}
       <View style={styles.bottomBar}>
-        {isEnrolled ? (
+        {isPast ? (
+          // Past match — view only regardless of enrollment
+          <View style={[styles.ctaButton, styles.ctaDisabled]}>
+            <Text style={styles.ctaButtonText}>
+              {isEnrolled ? '✓ Participaste en este partido' : 'Partido finalizado'}
+            </Text>
+          </View>
+        ) : isEnrolled ? (
+          // Enrolled in a future/active match
           <>
             <View style={styles.enrolledBadge}>
               <Text style={styles.enrolledBadgeText}>✓ Ya estás inscrito</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push(`/match/${id}/enroll` as any)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.enrolledLink}>Ver detalles de tu inscripción →</Text>
-            </TouchableOpacity>
+            {canWithdraw && (
+              <TouchableOpacity
+                onPress={confirmWithdraw}
+                activeOpacity={0.7}
+                disabled={withdrawing}
+              >
+                <Text style={[styles.withdrawLink, withdrawing && { opacity: 0.5 }]}>
+                  {withdrawing ? 'Procesando…' : 'Retirarme del partido'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : isFull ? (
           <View style={[styles.ctaButton, styles.ctaDisabled]}>
@@ -567,6 +687,61 @@ const styles = StyleSheet.create({
     color: colors.dim,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  withdrawLink: {
+    fontSize: 13,
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontWeight: '600',
+  },
+  playersSection: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  playersSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.mute,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: spacing.md,
+  },
+  playersList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  playerItem: {
+    alignItems: 'center',
+    gap: 6,
+    width: 56,
+  },
+  playerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(96,165,250,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playerAvatarSelf: {
+    backgroundColor: 'rgba(212,255,58,0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(212,255,58,0.4)',
+  },
+  playerAvatarText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  playerName: {
+    fontSize: 11,
+    color: colors.mute,
+    textAlign: 'center',
   },
   errorText: {
     fontSize: 15,

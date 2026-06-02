@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Mis Partidos — cancha.',
 };
 
-type MatchStatus = 'open' | 'confirmed' | 'completed' | 'cancelled';
+type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 type MatchType = 'open' | 'reservation';
 
 interface MatchRow {
@@ -30,14 +30,18 @@ interface MatchRow {
 const STATUS_LABELS: Record<MatchStatus, string> = {
   open: 'Abierto',
   confirmed: 'Confirmado',
-  completed: 'Completado',
+  en_curso: 'En curso',
+  jugado: 'Jugado',
+  completed: 'Jugado',
   cancelled: 'Cancelado',
 };
 
 const STATUS_CLASS: Record<MatchStatus, string> = {
   open: styles.badgeOpen,
   confirmed: styles.badgeConfirmed,
-  completed: styles.badgeCompleted,
+  en_curso: styles.badgeEnCurso,
+  jugado: styles.badgeJugado,
+  completed: styles.badgeJugado,
   cancelled: styles.badgeCancelled,
 };
 
@@ -68,11 +72,19 @@ export default async function MatchesPage() {
     .eq('user_id', user.id)
     .single();
 
-  // Fetch owner's fields ids
-  const { data: fieldsData, error: fieldsError } = await supabase
-    .from('fields')
-    .select('id, name')
+  // Fetch owner's fields via clubs join
+  const { data: clubsForOwner } = await supabase
+    .from('clubs')
+    .select('id')
     .eq('owner_id', user.id);
+  const ownerClubIds = (clubsForOwner ?? []).map(c => c.id);
+
+  const { data: fieldsData, error: fieldsError } = ownerClubIds.length > 0
+    ? await supabase
+        .from('fields')
+        .select('id, name')
+        .in('club_id', ownerClubIds)
+    : { data: [], error: null };
 
 
 

@@ -18,14 +18,15 @@ async function uploadImages(formData: FormData) {
   const fieldId = formData.get('field_id') as string;
   if (!fieldId) return;
 
+  // Verify ownership via clubs join
   const { data: field } = await supabase
     .from('fields')
-    .select('id, images')
+    .select('id, images, clubs(owner_id)')
     .eq('id', fieldId)
-    .eq('owner_id', user.id)
     .single();
 
-  if (!field) return;
+  const clubOwner = field?.clubs as { owner_id: string } | null;
+  if (!field || clubOwner?.owner_id !== user.id) return;
 
   const files = formData.getAll('images') as File[];
   const validFiles = files.filter((f) => f.size > 0);
@@ -73,18 +74,18 @@ async function removeImage(formData: FormData) {
   const imageUrl = formData.get('image_url') as string;
   if (!fieldId || !imageUrl) return;
 
+  // Verify ownership via clubs join
   const { data: field } = await supabase
     .from('fields')
-    .select('id, images')
+    .select('id, images, clubs(owner_id)')
     .eq('id', fieldId)
-    .eq('owner_id', user.id)
     .single();
 
-  if (!field) return;
+  const clubOwner = field?.clubs as { owner_id: string } | null;
+  if (!field || clubOwner?.owner_id !== user.id) return;
 
   const admin = createAdminClient();
 
-  // Extract storage path from public URL
   const url = new URL(imageUrl);
   const pathSegments = url.pathname.split('/object/public/field-images/');
   if (pathSegments[1]) {
@@ -113,12 +114,13 @@ export default async function FieldDetailPage({ params, searchParams }: PageProp
 
   const { data: field } = await supabase
     .from('fields')
-    .select('id, name, address, images, cities(name)')
+    .select('id, name, images, clubs(id, name, address, owner_id), cities(name)')
     .eq('id', id)
-    .eq('owner_id', user.id)
     .single();
 
-  if (!field) redirect('/dashboard/fields');
+  // Verify the authenticated user owns this field (via club)
+  const club = field?.clubs as { id: string; name: string; address: string; owner_id: string } | null;
+  if (!field || club?.owner_id !== user.id) redirect('/dashboard/fields');
 
   const city = field.cities as { name: string } | null;
   const images = (field.images ?? []) as string[];
@@ -130,11 +132,12 @@ export default async function FieldDetailPage({ params, searchParams }: PageProp
           <span className={styles.pageTag}>Gestión</span>
           <h1 className={styles.pageTitle}>{field.name}</h1>
           <p className={fieldStyles.fieldMeta}>
-            {field.address}{city ? ` · ${city.name}` : ''}
+            {club?.name ?? ''}
+            {city ? ` · ${city.name}` : ''}
           </p>
         </div>
-        <Link href="/dashboard/fields" className={styles.cancelBtn}>
-          ← Mis Canchas
+        <Link href={club?.id ? `/dashboard/clubs/${club.id}` : '/dashboard/fields'} className={styles.cancelBtn}>
+          ← {club?.name ?? 'Mis Canchas'}
         </Link>
       </header>
 

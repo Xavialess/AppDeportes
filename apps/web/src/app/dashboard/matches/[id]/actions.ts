@@ -20,11 +20,11 @@ export async function cancelMatchAction(matchId: string): Promise<{ error?: stri
   if (profile.role !== 'admin') {
     const { data: match } = await supabase
       .from('matches')
-      .select('field_id, fields(owner_id)')
+      .select('field_id, fields(clubs(owner_id))')
       .eq('id', matchId)
       .single();
-    const field = match?.fields as { owner_id: string } | null;
-    if (field?.owner_id !== user.id) return { error: 'No autorizado' };
+    const field = match?.fields as { clubs: { owner_id: string } | null } | null;
+    if (field?.clubs?.owner_id !== user.id) return { error: 'No autorizado' };
   }
 
   const admin = createAdminClient();

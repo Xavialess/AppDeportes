@@ -8,7 +8,11 @@ import i18n from '@appdeportes/i18n';
 import { useSession } from '../hooks/useSession';
 import { supabase } from '../lib/supabase';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+function hideSplash() {
+  SplashScreen.hideAsync().catch(() => {});
+}
 
 type UserRole = 'player' | 'owner' | 'admin';
 
@@ -21,7 +25,7 @@ function SessionGate({ children }: { children: React.ReactNode }) {
 
     if (!session) {
       hasRouted.current = false;
-      SplashScreen.hideAsync();
+      hideSplash();
       router.replace('/(auth)/login');
       return;
     }
@@ -35,14 +39,14 @@ function SessionGate({ children }: { children: React.ReactNode }) {
       .single()
       .then(({ data }) => {
         if (!data) {
-          SplashScreen.hideAsync();
+          hideSplash();
           router.replace('/(auth)/login');
           return;
         }
 
         hasRouted.current = true;
         const role = data.role as UserRole;
-        SplashScreen.hideAsync();
+        hideSplash();
         if (role === 'player') {
           router.replace('/(tabs)/');
         } else {

@@ -64,6 +64,31 @@ function formatTime(timeStr: string): string {
   return timeStr.slice(0, 5);
 }
 
+type EffectiveStatus = MatchDetail['status'];
+
+/**
+ * Computes the match state the player should see RIGHT NOW based on wall-clock
+ * time, without waiting for the cron to update the DB (up to 1 min lag).
+ *
+ * Rules:
+ *   - Terminal states (cancelled, jugado, completed) are never overridden.
+ *   - If end_time has passed → jugado
+ *   - If start_time has passed and match is confirmed → en_curso
+ *   - Otherwise return the DB status as-is.
+ */
+function getEffectiveStatus(match: MatchDetail): EffectiveStatus {
+  if (match.status === 'cancelled' || match.status === 'jugado' || match.status === 'completed') {
+    return match.status;
+  }
+  const now = new Date();
+  const kickoff = new Date(`${match.date}T${match.start_time}`);
+  const end     = match.end_time ? new Date(`${match.date}T${match.end_time}`) : null;
+
+  if (end && now >= end) return 'jugado';
+  if (now >= kickoff && match.status === 'confirmed') return 'en_curso';
+  return match.status;
+}
+
 function formatDeadlineDetail(deadlineStr: string | null): { label: string; expired: boolean } {
   if (!deadlineStr) return { label: 'Sin fecha límite', expired: false };
   const deadline = new Date(deadlineStr);
@@ -271,14 +296,16 @@ export default function MatchDetailScreen() {
     ? `${match.sports.name}${match.format ? ' · ' + match.format : ''}`
     : match.format ?? 'Partido';
 
+  const effectiveStatus = getEffectiveStatus(match);
+
   const { label: deadlineLabel, expired: deadlineExpired } = formatDeadlineDetail(match.confirmation_deadline);
-  const { allowed: enrollAllowed } = canEnroll(match, isEnrolled);
+  const { allowed: enrollAllowed } = canEnroll({ ...match, status: effectiveStatus }, isEnrolled);
 
   const isFull = match.max_players != null && match.enrolled_count >= match.max_players;
-  const isCancelled = match.status === 'cancelled';
-  const isPast = match.status === 'jugado' || match.status === 'completed' ||
-    (match.status !== 'en_curso' && new Date(`${match.date}T${match.start_time}`) < new Date());
-  const canWithdraw = isEnrolled && (match.status === 'open' || match.status === 'confirmed');
+  const isCancelled = effectiveStatus === 'cancelled';
+  const isPast = effectiveStatus === 'jugado' || effectiveStatus === 'completed';
+  const isInProgress = effectiveStatus === 'en_curso';
+  const canWithdraw = isEnrolled && (effectiveStatus === 'open' || effectiveStatus === 'confirmed');
 
   return (
     <View style={styles.container}>
@@ -327,7 +354,15 @@ export default function MatchDetailScreen() {
               <View style={[styles.badge, styles.badgeCancelled]}>
                 <Text style={[styles.badgeText, styles.badgeTextCancelled]}>Cancelado</Text>
               </View>
-            ) : match.status === 'confirmed' ? (
+            ) : isPast ? (
+              <View style={[styles.badge, styles.badgePast]}>
+                <Text style={[styles.badgeText, styles.badgeTextPast]}>Jugado</Text>
+              </View>
+            ) : isInProgress ? (
+              <View style={[styles.badge, styles.badgeInProgress]}>
+                <Text style={[styles.badgeText, styles.badgeTextInProgress]}>En curso</Text>
+              </View>
+            ) : effectiveStatus === 'confirmed' ? (
               <View style={[styles.badge, styles.badgeConfirmed]}>
                 <Text style={[styles.badgeText, styles.badgeTextConfirmed]}>Confirmado</Text>
               </View>
@@ -594,6 +629,12 @@ const styles = StyleSheet.create({
   badgeCancelled: {
     backgroundColor: colors.errorBg,
   },
+  badgeInProgress: {
+    backgroundColor: 'rgba(251,146,60,0.12)',
+  },
+  badgePast: {
+    backgroundColor: 'rgba(148,163,184,0.12)',
+  },
   badgeText: {
     fontSize: 11,
     fontWeight: '700',
@@ -607,6 +648,12 @@ const styles = StyleSheet.create({
   },
   badgeTextCancelled: {
     color: colors.error,
+  },
+  badgeTextInProgress: {
+    color: '#fb923c',
+  },
+  badgeTextPast: {
+    color: '#94a3b8',
   },
   infoCard: {
     backgroundColor: colors.card,

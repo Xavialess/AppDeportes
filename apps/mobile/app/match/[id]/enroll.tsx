@@ -183,6 +183,21 @@ export default function EnrollScreen() {
 
       if (insertErr) {
         if (insertErr.code === '23505') {
+          // Active enrollment already exists — check if it's retryable
+          const { data: existing } = await supabase
+            .from('enrollments')
+            .select('id, status')
+            .eq('match_id', id)
+            .eq('user_id', user.id)
+            .in('status', ['pending', 'payment_pending'])
+            .maybeSingle();
+
+          if (existing && selectedMethod === 'in_app') {
+            // Resume payment with the existing enrollment
+            router.replace(`/payment/deuna?enrollmentId=${existing.id}` as any);
+            return;
+          }
+
           setErrorMessage('Ya estás inscrito en este partido.');
           setScreenState('select');
           return;
@@ -191,7 +206,6 @@ export default function EnrollScreen() {
       }
 
       if (selectedMethod === 'in_app') {
-        // Navigate to QR payment screen — it will call the Edge Function
         router.replace(`/payment/deuna?enrollmentId=${enrollment.id}` as any);
         return;
       }

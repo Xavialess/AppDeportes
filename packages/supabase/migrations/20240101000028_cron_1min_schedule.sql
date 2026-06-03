@@ -11,21 +11,20 @@
 --
 -- Run via: supabase db push (or apply in Supabase SQL editor)
 
--- Update auto-cancel-matches: every 1 minute
-SELECT cron.alter_job(
-  jobid    := (SELECT jobid FROM cron.job WHERE jobname = 'auto-cancel-matches'),
-  schedule := '* * * * *'
-);
+-- Update schedules only if pg_cron extension and the jobs exist.
+-- Jobs registered manually in the Supabase dashboard (not via SQL) may not
+-- appear in cron.job. If missing, update the schedule in the dashboard manually:
+--   auto-cancel-matches  → * * * * *
+--   update-match-states  → * * * * *
+--   auto-confirm-matches → */10 * * * * (safety net — trigger handles this now)
 
--- Update update-match-states: every 1 minute
-SELECT cron.alter_job(
-  jobid    := (SELECT jobid FROM cron.job WHERE jobname = 'update-match-states'),
-  schedule := '* * * * *'
-);
-
--- Demote auto-confirm-matches to every 10 minutes (safety net only)
--- It will be a no-op in practice since the trigger handles confirmations instantly.
-SELECT cron.alter_job(
-  jobid    := (SELECT jobid FROM cron.job WHERE jobname = 'auto-confirm-matches'),
-  schedule := '*/10 * * * *'
-);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.schemata WHERE schema_name = 'cron'
+  ) THEN
+    UPDATE cron.job SET schedule = '* * * * *'    WHERE jobname = 'auto-cancel-matches';
+    UPDATE cron.job SET schedule = '* * * * *'    WHERE jobname = 'update-match-states';
+    UPDATE cron.job SET schedule = '*/10 * * * *' WHERE jobname = 'auto-confirm-matches';
+  END IF;
+END $$;

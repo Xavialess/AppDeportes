@@ -27,6 +27,8 @@ interface OwnerProfile {
   cancellation_count: number;
   plan_id: string | null;
   plans: { name: string } | null;
+  deuna_merchant_id: string | null;
+  deuna_phone_linked: string | null;
 }
 
 function getInitials(name: string | null, email: string | null): string {
@@ -57,6 +59,12 @@ export default function OwnerProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [editingDeuna, setEditingDeuna] = useState(false);
+  const [merchantIdInput, setMerchantIdInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [savingDeuna, setSavingDeuna] = useState(false);
+  const [deunaError, setDeunaError] = useState<string | null>(null);
+
   async function fetchProfile() {
     if (!user) return;
     setError(null);
@@ -65,7 +73,7 @@ export default function OwnerProfileScreen() {
         supabase.from('users').select('id, name, email, avatar').eq('id', user.id).single(),
         supabase
           .from('owner_profiles')
-          .select('cancellation_count, plan_id, plans(name)')
+          .select('cancellation_count, plan_id, plans(name), deuna_merchant_id, deuna_phone_linked')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]);
@@ -79,6 +87,8 @@ export default function OwnerProfileScreen() {
         cancellation_count: ownerData?.cancellation_count ?? 0,
         plan_id: ownerData?.plan_id ?? null,
         plans: (ownerData?.plans as { name: string } | null) ?? null,
+        deuna_merchant_id: ownerData?.deuna_merchant_id ?? null,
+        deuna_phone_linked: ownerData?.deuna_phone_linked ?? null,
       });
     } catch {
       setError('No se pudo cargar el perfil. Intenta de nuevo.');
@@ -140,6 +150,45 @@ export default function OwnerProfileScreen() {
       setSaveError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEditingDeuna() {
+    setMerchantIdInput(profile?.deuna_merchant_id ?? '');
+    setPhoneInput(profile?.deuna_phone_linked ?? '');
+    setDeunaError(null);
+    setEditingDeuna(true);
+  }
+
+  function cancelEditingDeuna() {
+    setEditingDeuna(false);
+    setDeunaError(null);
+  }
+
+  async function saveDeuna() {
+    if (!user) return;
+    const merchantId = merchantIdInput.trim();
+    const phone = phoneInput.trim();
+    if (!merchantId || !phone) {
+      setDeunaError('Ambos campos son obligatorios para activar De Una.');
+      return;
+    }
+    setSavingDeuna(true);
+    setDeunaError(null);
+    try {
+      const { error: err } = await supabase
+        .from('owner_profiles')
+        .update({ deuna_merchant_id: merchantId, deuna_phone_linked: phone })
+        .eq('user_id', user.id);
+      if (err) throw err;
+      setProfile((prev) =>
+        prev ? { ...prev, deuna_merchant_id: merchantId, deuna_phone_linked: phone } : prev
+      );
+      setEditingDeuna(false);
+    } catch {
+      setDeunaError('No se pudo guardar. Intenta de nuevo.');
+    } finally {
+      setSavingDeuna(false);
     }
   }
 
@@ -373,6 +422,91 @@ export default function OwnerProfileScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* De Una Negocios */}
+        <View style={styles.sectionLabel}>
+          <View style={styles.sectionLabelRow}>
+            <Text style={styles.sectionLabelText}>De Una Negocios</Text>
+            {profile?.deuna_merchant_id && profile?.deuna_phone_linked ? (
+              <View style={styles.deunaActiveBadge}>
+                <Text style={styles.deunaActiveBadgeText}>Activo</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.sectionHint}>
+            Tus jugadores podrán pagarte directamente con De Una.
+          </Text>
+        </View>
+
+        <View style={styles.menuCard}>
+          {editingDeuna ? (
+            <View style={styles.editSection}>
+              <Text style={styles.editLabel}>ID de comercio De Una</Text>
+              <TextInput
+                style={styles.textInput}
+                value={merchantIdInput}
+                onChangeText={setMerchantIdInput}
+                placeholder="merchant_xxxxxxxxx"
+                placeholderTextColor={colors.dim}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={[styles.editLabel, { marginTop: spacing.sm }]}>Teléfono De Una</Text>
+              <TextInput
+                style={styles.textInput}
+                value={phoneInput}
+                onChangeText={setPhoneInput}
+                placeholder="+593991234567"
+                placeholderTextColor={colors.dim}
+                keyboardType="phone-pad"
+              />
+              {deunaError ? (
+                <Text style={styles.saveError}>{deunaError}</Text>
+              ) : null}
+              <View style={styles.editActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={cancelEditingDeuna}
+                  disabled={savingDeuna}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, savingDeuna && styles.saveButtonDisabled]}
+                  onPress={saveDeuna}
+                  disabled={savingDeuna}
+                >
+                  {savingDeuna ? (
+                    <ActivityIndicator size="small" color={colors.accentFg} />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.menuRow} onPress={startEditingDeuna} activeOpacity={0.7}>
+                <View style={styles.menuRowLeft}>
+                  <Text style={styles.menuRowLabel}>ID de comercio</Text>
+                  <Text style={styles.menuRowValue}>
+                    {profile?.deuna_merchant_id ?? 'No configurado'}
+                  </Text>
+                </View>
+                <Text style={styles.editChevron}>Editar</Text>
+              </TouchableOpacity>
+              <View style={styles.menuDivider} />
+              <View style={styles.menuRow}>
+                <View style={styles.menuRowLeft}>
+                  <Text style={styles.menuRowLabel}>Teléfono</Text>
+                  <Text style={styles.menuRowValue}>
+                    {profile?.deuna_phone_linked ?? '—'}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Sign out */}
@@ -688,6 +822,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
+  },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 4,
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: colors.dim,
+    lineHeight: 16,
+  },
+  deunaActiveBadge: {
+    backgroundColor: '#00C6A2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  deunaActiveBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   errorBox: {
     marginHorizontal: spacing.xl,

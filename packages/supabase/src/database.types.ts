@@ -239,26 +239,30 @@ export type Database = {
           },
         ]
       }
-      fields: {
+      clubs: {
         Row: {
           address: string
           city_id: string
           created_at: string
+          description: string | null
           id: string
           images: string[]
-          latitude: number
-          longitude: number
+          is_active: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           owner_id: string
         }
         Insert: {
-          address: string
+          address?: string
           city_id: string
           created_at?: string
+          description?: string | null
           id?: string
           images?: string[]
-          latitude: number
-          longitude: number
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           owner_id: string
         }
@@ -266,12 +270,56 @@ export type Database = {
           address?: string
           city_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           images?: string[]
-          latitude?: number
-          longitude?: number
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clubs_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clubs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fields: {
+        Row: {
+          city_id: string
+          club_id: string | null
+          created_at: string
+          id: string
+          images: string[]
+          name: string
+        }
+        Insert: {
+          city_id: string
+          club_id?: string | null
+          created_at?: string
+          id?: string
+          images?: string[]
+          name: string
+        }
+        Update: {
+          city_id?: string
+          club_id?: string | null
+          created_at?: string
+          id?: string
+          images?: string[]
+          name?: string
         }
         Relationships: [
           {
@@ -282,10 +330,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fields_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "fields_club_id_fkey"
+            columns: ["club_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
         ]
@@ -382,6 +430,8 @@ export type Database = {
         Row: {
           cancellation_count: number
           created_at: string
+          deuna_merchant_id: string | null
+          deuna_phone_linked: string | null
           id: string
           plan_id: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
@@ -390,6 +440,8 @@ export type Database = {
         Insert: {
           cancellation_count?: number
           created_at?: string
+          deuna_merchant_id?: string | null
+          deuna_phone_linked?: string | null
           id?: string
           plan_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
@@ -398,6 +450,8 @@ export type Database = {
         Update: {
           cancellation_count?: number
           created_at?: string
+          deuna_merchant_id?: string | null
+          deuna_phone_linked?: string | null
           id?: string
           plan_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
@@ -580,8 +634,8 @@ export type Database = {
       }
     }
     Enums: {
-      enrollment_status: "pending" | "confirmed" | "cancelled" | "refunded"
-      match_status: "open" | "confirmed" | "completed" | "cancelled"
+      enrollment_status: "pending" | "payment_pending" | "confirmed" | "cancelled" | "refunded"
+      match_status: "open" | "confirmed" | "en_curso" | "jugado" | "completed" | "cancelled"
       match_type: "open" | "reservation"
       payment_method: "in_app" | "in_person"
       payment_status: "pending" | "completed" | "refunded" | "failed"

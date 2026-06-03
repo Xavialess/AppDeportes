@@ -30,6 +30,7 @@ interface MatchSummary {
   enrolled_count: number;
   sport_name: string;
   field_name: string;
+  ownerHasDeuna: boolean;
 }
 
 // ---- helpers --------------------------------------------------------------
@@ -69,7 +70,7 @@ export default function EnrollScreen() {
     try {
       const { data, error: matchErr } = await supabase
         .from('matches')
-        .select('id, date, start_time, status, price_per_player, max_players, sport_id, sports(name), fields(name)')
+        .select('id, date, start_time, status, price_per_player, max_players, sports(name), fields(name, clubs(owner_profiles(deuna_merchant_id)))')
         .eq('id', id)
         .single();
 
@@ -83,7 +84,10 @@ export default function EnrollScreen() {
         price_per_player: number | null;
         max_players: number | null;
         sports: { name: string } | null;
-        fields: { name: string } | null;
+        fields: {
+          name: string;
+          clubs: { owner_profiles: { deuna_merchant_id: string | null } | null } | null;
+        } | null;
       };
 
       const { count: enrollCount } = await supabase
@@ -102,6 +106,7 @@ export default function EnrollScreen() {
         enrolled_count: enrollCount ?? 0,
         sport_name: raw.sports?.name ?? 'Partido',
         field_name: raw.fields?.name ?? '—',
+        ownerHasDeuna: !!raw.fields?.clubs?.owner_profiles?.deuna_merchant_id,
       });
       setScreenState('select');
     } catch {
@@ -111,7 +116,7 @@ export default function EnrollScreen() {
   }
 
   async function handleConfirm() {
-    if (!selectedMethod || selectedMethod !== 'in_person') return;
+    if (!selectedMethod) return;
     if (!user?.id || !id) return;
     if (!matchSummary) return;
 
@@ -136,13 +141,16 @@ export default function EnrollScreen() {
     setErrorMessage(null);
 
     try {
-      const { error: insertErr } = await supabase
+      // Insert enrollment row
+      const { data: enrollment, error: insertErr } = await supabase
         .from('enrollments')
         .insert({
           match_id: id,
           user_id: user.id,
           status: 'pending',
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertErr) {
         if (insertErr.code === '23505') {
@@ -151,6 +159,12 @@ export default function EnrollScreen() {
           return;
         }
         throw insertErr;
+      }
+
+      if (selectedMethod === 'in_app') {
+        // Navigate to QR payment screen — it will call the Edge Function
+        router.replace(`/payment/deuna?enrollmentId=${enrollment.id}` as any);
+        return;
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -277,36 +291,55 @@ export default function EnrollScreen() {
           </Text>
         </TouchableOpacity>
 
-        <View style={[styles.methodCard, styles.methodCardDisabled]}>
-          <View style={styles.methodHeader}>
-            <View style={styles.radio} />
-            <Text style={styles.methodEmoji}>📱</Text>
-            <Text style={[styles.methodTitle, styles.methodTitleDisabled]}>Pago en app</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>Próximamente</Text>
+        {matchSummary.ownerHasDeuna ? (
+          <TouchableOpacity
+            style={[styles.methodCard, selectedMethod === 'in_app' && styles.methodCardSelected]}
+            onPress={() => setSelectedMethod('in_app')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.methodHeader}>
+              <View style={[styles.radio, selectedMethod === 'in_app' && styles.radioSelected]}>
+                {selectedMethod === 'in_app' && <View style={styles.radioDot} />}
+              </View>
+              <Text style={styles.methodEmoji}>📱</Text>
+              <Text style={styles.methodTitle}>Pago en app</Text>
+              <View style={styles.deunaTag}>
+                <Text style={styles.deunaTagText}>De Una</Text>
+              </View>
             </View>
+            <Text style={styles.methodDescription}>
+              Paga con QR a través de De Una. Tu cupo se confirma automáticamente.
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.methodCard, styles.methodCardDisabled]}>
+            <View style={styles.methodHeader}>
+              <View style={styles.radio} />
+              <Text style={styles.methodEmoji}>📱</Text>
+              <Text style={[styles.methodTitle, { color: colors.dim }]}>Pago en app</Text>
+            </View>
+            <Text style={[styles.methodDescription, { color: colors.dim }]}>
+              El dueño de esta cancha aún no tiene De Una configurado.
+            </Text>
           </View>
-          <Text style={[styles.methodDescription, styles.methodDescriptionDisabled]}>
-            Paga de forma segura desde la app con tarjeta o transferencia.
-          </Text>
-        </View>
+        )}
       </ScrollView>
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[
             styles.ctaButton,
-            (!selectedMethod || selectedMethod !== 'in_person' || screenState === 'confirming') && styles.ctaDisabled,
+            (!selectedMethod || screenState === 'confirming') && styles.ctaDisabled,
           ]}
           onPress={handleConfirm}
-          disabled={!selectedMethod || selectedMethod !== 'in_person' || screenState === 'confirming'}
+          disabled={!selectedMethod || screenState === 'confirming'}
           activeOpacity={0.8}
         >
           {screenState === 'confirming' ? (
             <ActivityIndicator color={colors.accentFg} />
           ) : (
             <Text style={styles.ctaButtonText}>
-              {selectedMethod === 'in_person'
+              {selectedMethod
                 ? `Confirmar · ${formatPrice(matchSummary.price_per_player)}`
                 : 'Selecciona un método de pago'}
             </Text>
@@ -409,9 +442,6 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     backgroundColor: 'rgba(212,255,58,0.04)',
   },
-  methodCardDisabled: {
-    opacity: 0.5,
-  },
   methodHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -444,28 +474,26 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
   },
-  methodTitleDisabled: {
-    color: colors.dim,
-  },
   methodDescription: {
     fontSize: 13,
     color: colors.mute,
     lineHeight: 18,
     marginLeft: 30,
   },
-  methodDescriptionDisabled: {
-    color: colors.dim,
+  methodCardDisabled: {
+    opacity: 0.5,
   },
-  comingSoonBadge: {
-    backgroundColor: colors.card2,
+  deunaTag: {
+    backgroundColor: '#00C6A2',
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.badge,
   },
-  comingSoonText: {
+  deunaTagText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: colors.dim,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   errorBox: {
     backgroundColor: colors.errorBg,

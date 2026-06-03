@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { icon: '🏗️', label: 'Complejos', href: '/dashboard/clubs', exact: false },
   { icon: '🏟️', label: 'Mis canchas', href: '/dashboard/fields', exact: false },
   { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', exact: false },
+  { icon: '⚙️', label: 'Ajustes', href: '/dashboard/settings', exact: false },
 ];
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {

@@ -261,7 +261,8 @@ export default function PostMatchScreen() {
         matchData.total_price = Number(totalPrice);
       }
 
-      const { error: insertError } = await supabase.from('matches').insert(matchData);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: insertError } = await supabase.from('matches').insert(matchData as any);
       if (insertError) throw insertError;
 
       setSuccess(true);

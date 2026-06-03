@@ -42,7 +42,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // ---------------------------------------------------------------------------
 
 type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
-type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+type EnrollmentStatus = 'pending' | 'payment_pending' | 'confirmed' | 'cancelled' | 'refunded';
+
+// How long before we consider a De Una payment intent a zombie.
+// De Una's actual expiry isn't confirmed yet — using 25 min as a safe upper bound.
+// Update once the exact expiry is known from the De Una developer portal.
+const DEUNA_ZOMBIE_THRESHOLD_MINUTES = 25;
 
 interface EligibleMatch {
   id: string;
@@ -99,7 +104,7 @@ async function processMatch(
       .from('enrollments')
       .select('id, payment_id')
       .eq('match_id', matchId)
-      .in('status', ['pending', 'confirmed'] satisfies EnrollmentStatus[]);
+      .in('status', ['pending', 'payment_pending', 'confirmed'] satisfies EnrollmentStatus[]);
 
     if (enrollErr) {
       throw new Error(`enrollment fetch: ${enrollErr.message}`);
@@ -137,7 +142,7 @@ async function processMatch(
       .from('enrollments')
       .update({ status: 'refunded' satisfies EnrollmentStatus })
       .eq('match_id', matchId)
-      .in('status', ['pending', 'confirmed'] satisfies EnrollmentStatus[]);
+      .in('status', ['pending', 'payment_pending', 'confirmed'] satisfies EnrollmentStatus[]);
 
     if (refundErr) {
       throw new Error(`enrollment refund: ${refundErr.message}`);
@@ -259,5 +264,37 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   console.log(JSON.stringify({ event: 'job_complete', ...summary, results: undefined }));
 
-  return jsonResponse(summary);
+  // ── Zombie cleanup: reset stale payment_pending enrollments ─────────────
+  // Covers the case where the De Una webhook never arrives (network outage,
+  // player killed the app, De Una outage). The 'expired' webhook is the
+  // primary path; this cron is the safety net.
+  //
+  // Condition: enrollment.status = 'payment_pending' AND the corresponding
+  // payment row was created more than DEUNA_ZOMBIE_THRESHOLD_MINUTES ago
+  // (meaning the intent has certainly expired by now).
+  const zombieThreshold = new Date(
+    Date.now() - DEUNA_ZOMBIE_THRESHOLD_MINUTES * 60 * 1000,
+  ).toISOString();
+
+  const { error: zombieErr, count: zombieCount } = await supabase
+    .from('enrollments')
+    .update({ status: 'pending' satisfies EnrollmentStatus })
+    .eq('status', 'payment_pending' satisfies EnrollmentStatus)
+    .in(
+      'id',
+      supabase
+        .from('payments')
+        .select('enrollment_id')
+        .eq('provider', 'deuna')
+        .eq('status', 'pending')
+        .lt('created_at', zombieThreshold),
+    );
+
+  if (zombieErr) {
+    console.error(JSON.stringify({ event: 'zombie_cleanup_error', error: zombieErr.message }));
+  } else {
+    console.log(JSON.stringify({ event: 'zombie_cleanup_complete', reset_count: zombieCount ?? 0 }));
+  }
+
+  return jsonResponse({ ...summary, zombie_slots_freed: zombieCount ?? 0 });
 });

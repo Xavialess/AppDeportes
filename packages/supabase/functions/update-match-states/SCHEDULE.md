@@ -19,6 +19,25 @@ time-driven, not row-change driven.
 | URL      | `https://xnasvbtyvxwmkhkgidnj.supabase.co/functions/v1/update-match-states` |
 | Header   | `Authorization: Bearer <SERVICE_ROLE_KEY>` |
 
+Or via SQL (run in Supabase SQL Editor):
+
+```sql
+SELECT cron.schedule(
+  'update-match-states',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url     := 'https://xnasvbtyvxwmkhkgidnj.supabase.co/functions/v1/update-match-states',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true),
+      'Content-Type',  'application/json'
+    ),
+    body    := '{}'::jsonb
+  )
+  $$
+);
+```
+
 ## Health check
 
 ```

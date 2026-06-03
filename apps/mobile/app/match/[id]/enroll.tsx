@@ -70,7 +70,7 @@ export default function EnrollScreen() {
     try {
       const { data, error: matchErr } = await supabase
         .from('matches')
-        .select('id, date, start_time, status, price_per_player, max_players, sports(name), fields(name, clubs(owner_profiles(deuna_merchant_id)))')
+        .select('id, date, start_time, status, price_per_player, max_players, sports(name), fields(name)')
         .eq('id', id)
         .single();
 
@@ -84,17 +84,30 @@ export default function EnrollScreen() {
         price_per_player: number | null;
         max_players: number | null;
         sports: { name: string } | null;
-        fields: {
-          name: string;
-          clubs: { owner_profiles: { deuna_merchant_id: string | null } | null } | null;
-        } | null;
+        fields: { name: string } | null;
       };
 
-      const { count: enrollCount } = await supabase
-        .from('enrollments')
-        .select('id', { count: 'exact', head: true })
-        .eq('match_id', id)
-        .in('status', ['pending', 'confirmed']);
+      const [{ count: enrollCount }, ownerDeuna] = await Promise.all([
+        supabase
+          .from('enrollments')
+          .select('id', { count: 'exact', head: true })
+          .eq('match_id', id)
+          .in('status', ['pending', 'payment_pending', 'confirmed']),
+        // Separate query so a missing column (pre-migration) never breaks the screen
+        (async (): Promise<boolean> => {
+          try {
+            const { data: d } = await supabase
+              .from('matches')
+              .select('fields(clubs(owner_profiles(deuna_merchant_id)))')
+              .eq('id', id)
+              .single();
+            const fp = (d as any)?.fields?.clubs?.owner_profiles;
+            return !!fp?.deuna_merchant_id;
+          } catch {
+            return false;
+          }
+        })(),
+      ]);
 
       setMatchSummary({
         id: raw.id,
@@ -106,7 +119,7 @@ export default function EnrollScreen() {
         enrolled_count: enrollCount ?? 0,
         sport_name: raw.sports?.name ?? 'Partido',
         field_name: raw.fields?.name ?? '—',
-        ownerHasDeuna: !!raw.fields?.clubs?.owner_profiles?.deuna_merchant_id,
+        ownerHasDeuna: ownerDeuna,
       });
       setScreenState('select');
     } catch {

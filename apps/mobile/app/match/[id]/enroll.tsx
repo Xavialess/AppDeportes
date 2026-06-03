@@ -93,16 +93,32 @@ export default function EnrollScreen() {
           .select('id', { count: 'exact', head: true })
           .eq('match_id', id)
           .in('status', ['pending', 'payment_pending', 'confirmed']),
-        // Separate query so a missing column (pre-migration) never breaks the screen
+        // Walk match → field.club_id → club.owner_id → owner_profiles.deuna_merchant_id
+        // Done in steps because there is no direct FK from clubs to owner_profiles
+        // that PostgREST can infer automatically.
         (async (): Promise<boolean> => {
           try {
-            const { data: d } = await supabase
+            const { data: matchField } = await supabase
               .from('matches')
-              .select('fields(clubs(owner_profiles(deuna_merchant_id)))')
+              .select('fields(club_id)')
               .eq('id', id)
               .single();
-            const fp = (d as any)?.fields?.clubs?.owner_profiles;
-            return !!fp?.deuna_merchant_id;
+            const clubId = (matchField as any)?.fields?.club_id;
+            if (!clubId) return false;
+
+            const { data: club } = await supabase
+              .from('clubs')
+              .select('owner_id')
+              .eq('id', clubId)
+              .single();
+            if (!club?.owner_id) return false;
+
+            const { data: profile } = await supabase
+              .from('owner_profiles')
+              .select('deuna_merchant_id')
+              .eq('user_id', club.owner_id)
+              .single();
+            return !!profile?.deuna_merchant_id;
           } catch {
             return false;
           }

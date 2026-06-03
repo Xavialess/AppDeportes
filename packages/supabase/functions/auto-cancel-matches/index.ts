@@ -276,9 +276,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     Date.now() - DEUNA_ZOMBIE_THRESHOLD_MINUTES * 60 * 1000,
   ).toISOString();
 
+  // Cancel (not revert to pending) — zombie De Una enrollments held the slot
+  // without payment. Player must re-enroll to try again. Matches in-person
+  // flow separation: only in_person enrollments use 'pending' as their resting state.
   const { error: zombieErr, count: zombieCount } = await supabase
     .from('enrollments')
-    .update({ status: 'pending' satisfies EnrollmentStatus })
+    .update({ status: 'cancelled' satisfies EnrollmentStatus })
     .eq('status', 'payment_pending' satisfies EnrollmentStatus)
     .in(
       'id',

@@ -177,6 +177,7 @@ export default function EnrollScreen() {
           match_id: id,
           user_id: user.id,
           status: 'pending',
+          payment_method: selectedMethod, // 'in_person' | 'in_app'
         })
         .select('id')
         .single();

@@ -194,6 +194,7 @@ export type Database = {
           id: string
           match_id: string
           payment_id: string | null
+          payment_method: 'in_person' | 'in_app'
           status: Database["public"]["Enums"]["enrollment_status"]
           user_id: string
         }
@@ -203,6 +204,7 @@ export type Database = {
           id?: string
           match_id: string
           payment_id?: string | null
+          payment_method?: 'in_person' | 'in_app'
           status?: Database["public"]["Enums"]["enrollment_status"]
           user_id: string
         }
@@ -212,6 +214,7 @@ export type Database = {
           id?: string
           match_id?: string
           payment_id?: string | null
+          payment_method?: 'in_person' | 'in_app'
           status?: Database["public"]["Enums"]["enrollment_status"]
           user_id?: string
         }

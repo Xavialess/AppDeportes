@@ -94,13 +94,15 @@ export async function handleDeunaWebhook(
       .update({ status: 'failed' })
       .eq('id', payment.id);
 
-    // Reset enrollment so the player can retry without creating a new enrollment
+    // Cancel the enrollment — De Una failure means the player did not pay.
+    // They must re-enroll to try again. This frees the slot immediately for
+    // other players. In-person flow is separate and unaffected.
     await supabase
       .from('enrollments')
-      .update({ status: 'pending' })
+      .update({ status: 'cancelled' })
       .eq('id', payment.enrollment_id);
 
-    return json({ ok: true, retryable: true }, 200);
+    return json({ ok: true, slot_freed: true }, 200);
   }
 
   // ── 5b. Call atomic RPC (completion path) ────────────────────────────────

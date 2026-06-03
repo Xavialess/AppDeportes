@@ -127,7 +127,7 @@ Deno.test('returns 200 (ignored) for unrecognised event types', async () => {
 // Failed / expired path
 // ---------------------------------------------------------------------------
 
-Deno.test('returns 200 with retryable=true on payment.failed', async () => {
+Deno.test('returns 200 with slot_freed=true on payment.failed — enrollment cancelled', async () => {
   const result = await handleDeunaWebhook(
     makeBody({ event: 'payment.failed' }),
     VALID_SIGNATURE,
@@ -136,10 +136,10 @@ Deno.test('returns 200 with retryable=true on payment.failed', async () => {
   assertEquals(result.status, 200);
   const body = await result.json();
   assertEquals(body.ok, true);
-  assertEquals(body.retryable, true);
+  assertEquals(body.slot_freed, true);
 });
 
-Deno.test('returns 200 with retryable=true on payment.expired', async () => {
+Deno.test('returns 200 with slot_freed=true on payment.expired — enrollment cancelled', async () => {
   const result = await handleDeunaWebhook(
     makeBody({ event: 'payment.expired' }),
     VALID_SIGNATURE,
@@ -148,7 +148,7 @@ Deno.test('returns 200 with retryable=true on payment.expired', async () => {
   assertEquals(result.status, 200);
   const body = await result.json();
   assertEquals(body.ok, true);
-  assertEquals(body.retryable, true);
+  assertEquals(body.slot_freed, true);
 });
 
 // ---------------------------------------------------------------------------

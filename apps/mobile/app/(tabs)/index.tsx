@@ -117,22 +117,21 @@ function formatDeadline(deadlineStr: string | null): string | null {
 export default function MatchListScreen() {
   const insets = useSafeAreaInsets();
 
+  const days = generateDays(14);
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(days[0].date); // today by default
   const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const days = generateDays(14);
 
-  async function fetchMatches(cityId: string | null, sportId: string | null, date: string | null = null) {
+  async function fetchMatches(cityId: string | null, sportId: string | null, date: string) {
     setError(null);
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     try {
       let query = supabase
         .from('matches')
@@ -141,8 +140,7 @@ export default function MatchListScreen() {
         )
         .in('status', ['open', 'confirmed', 'en_curso'])
         .eq('is_visible', true)
-        .gte('date', todayStr)
-        .order('date', { ascending: true })
+        .eq('date', date)
         .order('start_time', { ascending: true });
 
       if (cityId) {
@@ -150,9 +148,6 @@ export default function MatchListScreen() {
       }
       if (sportId) {
         query = query.eq('sport_id', sportId);
-      }
-      if (date) {
-        query = query.eq('date', date);
       }
 
       const { data, error: err } = await query;
@@ -211,7 +206,7 @@ export default function MatchListScreen() {
       }
       setSelectedCityId(resolvedCityId);
 
-      await fetchMatches(resolvedCityId, null, null);
+      await fetchMatches(resolvedCityId, null, days[0].date);
       setLoading(false);
     }
 
@@ -372,7 +367,7 @@ export default function MatchListScreen() {
               <TouchableOpacity
                 key={day.date}
                 style={[styles.dayPill, active && styles.dayPillActive]}
-                onPress={() => setSelectedDate(active ? null : day.date)}
+                onPress={() => setSelectedDate(day.date)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.dayPillName, active && styles.dayPillNameActive]}>
@@ -471,7 +466,7 @@ export default function MatchListScreen() {
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={() => fetchMatches(selectedCityId, selectedSportId)} style={styles.retryButton}>
+          <TouchableOpacity onPress={() => fetchMatches(selectedCityId, selectedSportId, selectedDate)} style={styles.retryButton}>
             <Text style={styles.retryText}>Reintentar</Text>
           </TouchableOpacity>
         </View>
@@ -493,11 +488,10 @@ export default function MatchListScreen() {
               </View>
               <Text style={styles.emptyTitle}>No hay partidos cerca</Text>
               <Text style={styles.emptyText}>
-                {selectedDate
-                  ? 'No hay partidos para este día. Prueba otro día o quita el filtro.'
-                  : selectedCity
-                  ? `No hay partidos en ${selectedCity.name} ahora mismo.`
-                  : 'Prueba otro deporte o revisa más tarde.'}
+                {selectedCity
+                  ? `No hay partidos en ${selectedCity.name} para este día.`
+                  : 'No hay partidos para este día.'}
+                {'\n'}Prueba otro día o deporte.
               </Text>
             </View>
           ) : null

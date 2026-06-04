@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
+import { Home, Calendar, Building2, LayoutGrid, CreditCard, Settings, Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { LogoutButton } from '@/app/(dashboard)/LogoutButton';
 import { NavLink } from '@/app/dashboard/NavLink';
@@ -11,13 +12,13 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const NAV_ITEMS = [
-  { icon: '🏠', label: 'Inicio', href: '/dashboard', exact: true },
-  { icon: '⚽', label: 'Mis partidos', href: '/dashboard/matches', exact: false },
-  { icon: '🏗️', label: 'Complejos', href: '/dashboard/clubs', exact: false },
-  { icon: '🏟️', label: 'Mis canchas', href: '/dashboard/fields', exact: false },
-  { icon: '💳', label: 'Suscripción', href: '/dashboard/plan', exact: false },
-  { icon: '⚙️', label: 'Ajustes', href: '/dashboard/settings', exact: false },
+const NAV_ITEMS: { icon: JSX.Element; label: string; href: string; exact: boolean }[] = [
+  { icon: <Home size={16} />, label: 'Inicio', href: '/dashboard', exact: true },
+  { icon: <Calendar size={16} />, label: 'Mis partidos', href: '/dashboard/matches', exact: false },
+  { icon: <Building2 size={16} />, label: 'Complejos', href: '/dashboard/clubs', exact: false },
+  { icon: <LayoutGrid size={16} />, label: 'Mis canchas', href: '/dashboard/fields', exact: false },
+  { icon: <CreditCard size={16} />, label: 'Suscripción', href: '/dashboard/plan', exact: false },
+  { icon: <Settings size={16} />, label: 'Ajustes', href: '/dashboard/settings', exact: false },
 ];
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -63,7 +64,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   const mobileNavItems = [
     ...NAV_ITEMS,
-    ...(role === 'admin' ? [{ icon: '🛡️', label: 'Admin', href: '/admin', exact: false }] : []),
+    ...(role === 'admin' ? [{ icon: <Shield size={16} />, label: 'Admin', href: '/admin', exact: false }] : []),
   ];
 
   return (
@@ -98,7 +99,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
             <li>
               <NavLink
                 href="/admin"
-                icon="🛡️"
+                icon={<Shield size={16} />}
                 label="Admin"
                 exact={false}
               />

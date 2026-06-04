@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './mobile-nav.module.css';
 
 interface NavItem {
-  icon: string;
+  icon: JSX.Element;
   label: string;
   href: string;
   exact: boolean;

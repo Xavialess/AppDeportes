@@ -74,13 +74,16 @@
 .navItemActive {
   background: rgba(212, 255, 58, 0.08);
   color: var(--color-accent);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .navIcon {
-  font-size: var(--text-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
-  text-align: center;
   flex-shrink: 0;
+  color: currentColor;
 }
 
 /* ─── Sidebar bottom ──────────────────────────────────────────────────────── */

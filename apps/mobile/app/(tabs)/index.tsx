@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
   },
   dayPillName: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.dim,
     letterSpacing: 0.4,
@@ -648,11 +648,11 @@ const styles = StyleSheet.create({
   },
   cardCover: {
     width: '100%',
-    height: 90,
+    height: 140,
     backgroundColor: colors.line,
   },
   cardBody: {
-    padding: 10,
+    padding: 12,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -704,13 +704,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
   },
   cardField: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.mute,
     marginBottom: 2,
   },
   cardFieldSub: {
-    fontSize: 11,
-    color: colors.dim,
+    fontSize: 12,
+    color: colors.mute,
     marginBottom: 2,
   },
   cardMeta: {
@@ -754,7 +754,6 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     flex: 1,
-    maxWidth: 80,
     height: 4,
     backgroundColor: colors.card2,
     borderRadius: radius.pill,
@@ -772,7 +771,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   progressLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.mute,
     fontWeight: '600',
   },

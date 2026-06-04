@@ -10,6 +10,7 @@ export const colors = {
   dim:     'rgba(255,255,255,0.32)',
   accent:  '#d4ff3a',
   accentFg: '#0a0a0a',
+  accentDim: 'rgba(212,255,58,0.55)',
   error:   '#f87171',
   errorBg: 'rgba(248,113,113,0.08)',
   errorBorder: 'rgba(248,113,113,0.25)',

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 interface NavLinkProps {
   href: string;
-  icon: string;
+  icon: JSX.Element;
   label: string;
   /** If true, only exact path match activates the item. Default: prefix match. */
   exact?: boolean;

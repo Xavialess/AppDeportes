@@ -93,7 +93,11 @@ export async function createMatch(formData: FormData): Promise<CreateMatchResult
     if (!minPlayers || minPlayers < 2) return { error: 'El mínimo de jugadores debe ser al menos 2.' };
     if (!maxPlayers || maxPlayers < minPlayers) return { error: 'El máximo de jugadores debe ser mayor o igual al mínimo.' };
     if (!deadline) return { error: 'El plazo de confirmación es requerido.' };
-    if (new Date(deadline) >= new Date(date)) return { error: 'El plazo de confirmación debe ser antes de la fecha del partido.' };
+    // Compare deadline against the full match kickoff datetime, not just the date.
+    // new Date(date) parses as midnight UTC which causes timezone errors — use
+    // the date + start_time combination to build the real kickoff moment.
+    const kickoff = new Date(`${date}T${startTime}`);
+    if (new Date(deadline) >= kickoff) return { error: 'El plazo de confirmación debe ser antes de la hora de inicio del partido.' };
 
     payload.price_per_player = pricePerPlayer;
     payload.min_players = minPlayers;

@@ -38,6 +38,8 @@ export function matchStatusLabel(status: MatchStatus): string {
   const labels: Record<MatchStatus, string> = {
     open: 'Abierto',
     confirmed: 'Confirmado',
+    en_curso: 'En curso',
+    jugado: 'Jugado',
     completed: 'Completado',
     cancelled: 'Cancelado',
   };

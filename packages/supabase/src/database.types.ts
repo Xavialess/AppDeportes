@@ -357,6 +357,7 @@ export type Database = {
           max_players: number | null
           min_players: number | null
           price_per_player: number | null
+          reminder_sent_at: string | null
           sport_id: string
           start_time: string
           status: Database["public"]["Enums"]["match_status"]
@@ -378,6 +379,7 @@ export type Database = {
           max_players?: number | null
           min_players?: number | null
           price_per_player?: number | null
+          reminder_sent_at?: string | null
           sport_id: string
           start_time: string
           status?: Database["public"]["Enums"]["match_status"]
@@ -399,6 +401,7 @@ export type Database = {
           max_players?: number | null
           min_players?: number | null
           price_per_player?: number | null
+          reminder_sent_at?: string | null
           sport_id?: string
           start_time?: string
           status?: Database["public"]["Enums"]["match_status"]
@@ -551,6 +554,41 @@ export type Database = {
           price?: number
         }
         Relationships: []
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sports: {
         Row: {

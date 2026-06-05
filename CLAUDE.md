@@ -1,7 +1,7 @@
 # AppDeportes — Project Context for Claude Code
 
 > **Living document.** Update at the end of every session where something significant is built or decided.
-> Last updated: 2026-06-02 (match states, clubs structure, enrollment UX, player withdrawal)
+> Last updated: 2026-06-04 (De Una payments, match state machine, cron infrastructure, enrollment fixes)
 
 ---
 
@@ -20,7 +20,7 @@ A sports booking app for Ecuador, similar to GoodRec. Players find and join open
 | Web | Next.js 15 (App Router) + React 19 |
 | Database / Auth / Realtime | Supabase (Postgres 15) |
 | Server logic | Supabase Edge Functions (Deno) |
-| Payments | TBD — Stripe or Kushki. Apple Pay required. Data model is provider-agnostic. |
+| Payments | De Una (deuna.ec) — QR-based P2P payments. cancha. never holds funds. Needs DEUNA_MASTER_TOKEN + DEUNA_WEBHOOK_SECRET from De Una developer portal. |
 | i18n | i18next + react-i18next. Spanish default. English file exists but is empty. |
 | Language | TypeScript throughout |
 
@@ -68,8 +68,8 @@ Three roles on the same `users` table: `player`, `owner`, `admin`.
 | `clubs` | Complejos/venues owned by owners. Has `owner_id`, `city_id`, `name`, `address`, `images`. One owner can have multiple clubs in different locations. |
 | `fields` | Individual canchas within a club. Has `club_id` (FK → clubs), `city_id` (denormalized for query filtering), `name`, `images`. **No `owner_id`** — ownership is always via `fields.club_id → clubs.owner_id`. |
 | `matches` | Core entity. `type`: `open` (individual enrollment) or `reservation` (full field). `status`: see Match Lifecycle below. |
-| `enrollments` | Player enrollment in open matches. One row per player per match. |
-| `payments` | Provider-agnostic payment records. `provider` and `provider_transaction_id` are plain text strings. |
+| `enrollments` | Player enrollment in open matches. `payment_method`: `'in_person'` or `'in_app'`. Partial unique index (active statuses only) allows re-enrollment after cancellation. |
+| `payments` | Provider-agnostic payment records. `provider` and `provider_transaction_id` are plain text strings. Partial unique index prevents duplicate in-flight intents per enrollment. |
 
 ### Key constraints to remember
 - `matches.type = 'open'` requires: `price_per_player`, `min_players`, `max_players`, `confirmation_deadline`
@@ -77,6 +77,8 @@ Three roles on the same `users` table: `player`, `owner`, `admin`.
 - `enrollments` has a circular FK with `payments` (intentional — added via ALTER TABLE after both tables are created)
 - **Never use `fields.owner_id`** — it was removed in migration 16. Ownership is always `fields.club_id → clubs.owner_id`
 - `fields.city_id` is kept denormalized (matches `clubs.city_id`) for efficient city-based match filtering
+- `enrollments.payment_method` separates in-person (`pending` resting state) from De Una (`in_app`, cancelled on payment failure)
+- `owner_profiles.deuna_merchant_id` + `deuna_phone_linked` required for De Una payments on that owner's matches
 
 ---
 
@@ -92,9 +94,9 @@ open ──► confirmed ──► en_curso ──► jugado
 | Status | Meaning | Who/what sets it |
 |---|---|---|
 | `open` | Accepting enrollments | Owner posts |
-| `confirmed` | Min players met, slot locked | `auto-confirm-matches` Edge Function |
-| `en_curso` | Kick-off time reached | `update-match-states` Edge Function (every 5 min) |
-| `jugado` | Match finished (end time passed or owner marks attendance) | `update-match-states` / `mark-attendance` |
+| `confirmed` | Min players met, slot locked | Postgres trigger `trg_auto_confirm_match_on_enrollment` (instant) |
+| `en_curso` | Kick-off time reached | `update-match-states` cron (every 1 min) + client virtual state |
+| `jugado` | Match finished (end time passed or owner marks attendance) | `update-match-states` cron (every 1 min) + client virtual state |
 | `cancelled` | Match cancelled | Owner manually, or `auto-cancel-matches` |
 | `completed` | Legacy alias for `jugado` — kept in enum for backwards compat, never assigned to new matches |
 
@@ -106,13 +108,18 @@ open ──► confirmed ──► en_curso ──► jugado
 ### Open Match flow
 ```
 Owner posts → status=open, is_visible=true
-Players enroll + pay → enrollments.status=pending
-Before deadline:
-  enrolled_count >= min_players → auto-confirm (status=confirmed)
-  enrolled_count < min_players → auto-cancel (status=cancelled, refunds triggered)
-Owner can manually cancel open/confirmed match → cancellation_count++, refunds
-At kick-off time → status=en_curso (auto, every 5 min)
-At end time → status=jugado (auto, every 5 min)
+Players enroll (in_person → pending, in_app → pending → payment_pending → confirmed)
+Each enrollment triggers instant check:
+  enrolled_count >= min_players AND deadline not passed → confirmed (trigger, instant)
+Deadline passes with enrolled_count < min_players → cancelled (cron, ≤1 min)
+Withdrawal from confirmed match:
+  count drops to 0 AND deadline passed → cancelled (trigger)
+  count < min AND deadline not passed → reverts to open (trigger)
+  count < min AND deadline passed AND count > 0 → stays confirmed (owner handles)
+De Una payment failed/expired → enrollment cancelled (slot freed immediately)
+Zombie payment_pending > 25 min → enrollment cancelled (cron cleanup)
+At kick-off time → status=en_curso (cron ≤1 min + instant client virtual state)
+At end time → status=jugado (cron ≤1 min + instant client virtual state)
 Owner marks attendance → mark-attendance Edge Function → increments users.matches_played
 ```
 
@@ -125,18 +132,28 @@ Cancellation window TBD — schema supports it via payments.status + cancellatio
 
 ---
 
-## Auto-State-Change Edge Functions
+## Auto-State-Change Infrastructure
 
-Three scheduled Edge Functions run every 5 minutes via pg_cron:
-
-| Function | What it does |
+### Postgres triggers (instant, no lag)
+| Trigger | What it does |
 |---|---|
-| `auto-cancel-matches` | Cancels `open` matches past their `confirmation_deadline` with `< min_players`. Also cancels `open` matches past kick-off time (via `get_past_kickoff_open_matches()` RPC, timezone: `America/Guayaquil`). |
-| `auto-confirm-matches` | Confirms `open` matches that hit `min_players` before their deadline. |
-| `update-match-states` | Advances `confirmed → en_curso` (at kick-off) and `en_curso → jugado` (at end time), using `get_kickoff_confirmed_matches()` and `get_finished_in_progress_matches()` RPCs. |
+| `trg_auto_confirm_match_on_enrollment` | Fires on every enrollment INSERT/UPDATE. Confirms match instantly when active count ≥ min_players and deadline not passed. Bulk-confirms pending (in-person) enrollments. |
+| `trg_reevaluate_match_on_enrollment_change` | Fires when an active enrollment becomes inactive (cancelled/refunded/pending). Re-evaluates confirmed matches: reverts to open (deadline not passed), cancels (count=0 + deadline passed), or leaves confirmed (owner handles). |
+
+### Cron jobs via pg_cron (every 1 minute)
+| Function | Schedule | What it does |
+|---|---|---|
+| `auto-cancel-matches` | `* * * * *` | Cancels `open` matches past deadline with `< min_players`. Cancels `open` matches past kickoff. Resets zombie `payment_pending` enrollments (>25 min) to `cancelled`. |
+| `update-match-states` | `* * * * *` | Advances `confirmed → en_curso` at kickoff, `en_curso → jugado` at end time. |
+| `auto-confirm-matches` | `*/10 * * * *` | Safety net only — replaced by trigger. No-op in normal operation. |
+
+### Client virtual state (instant display)
+`getEffectiveStatus()` in match detail screen computes `en_curso`/`jugado` from wall-clock time without waiting for the cron. Players see the correct state at exactly kickoff/end time.
 
 - System cancellations: `cancelled_by = NULL` (owner penalty counter NOT incremented)
 - Owner cancellations: `cancelled_by = owner_id` (penalty counter incremented via trigger)
+- **De Una payment failure**: enrollment → `cancelled` (not pending). Player must re-enroll to retry.
+- **In-person flow**: enrollment stays `pending` until owner marks attendance. Separated by `enrollments.payment_method`.
 
 ---
 
@@ -227,23 +244,29 @@ SUPABASE_SERVICE_ROLE_KEY   ← never expose to browser, server-side only
 - **Mobile SessionGate**: `apps/mobile/app/_layout.tsx`. Uses a `hasRouted` ref so `router.replace()` only fires once on initial load — subsequent session token refreshes do NOT re-route the user. If you need to force re-routing after a role change, reset `hasRouted.current = false` before navigating.
 - **Owner mobile structure**: "Complejos" tab (`(owner)/fields.tsx`) shows clubs list → tap → `(owner)/club/[id].tsx` shows fields within a club → tap → `(owner)/my-field/[id].tsx` for image management.
 - **Match detail enrollment check**: `useEffect` in `match/[id].tsx` depends on `[id, user?.id]` — both must be in the dep array so the enrollment check re-runs when the session loads after the match data.
-- **Player listing filters**: only shows `status IN ('open', 'confirmed', 'en_curso')` matches with `date >= today`. Past dates are never shown in Explore.
+- **Player listing filters**: Explore shows selected day only (mandatory). Defaults to today. No deselect — a day is always active.
+- **Match detail virtual state**: `getEffectiveStatus()` computes effective status from wall clock. Use this for display; DB status for business logic writes.
+- **De Una payment flow**: `enroll.tsx` inserts enrollment → navigates to `/payment/deuna`. QR screen calls `create-deuna-payment` Edge Function. Webhook at `/functions/v1/deuna-webhook` confirms enrollment. Failed payment → enrollment `cancelled` (not pending). Player re-enrolls to retry.
+- **De Una credential gate**: owner must have `owner_profiles.deuna_merchant_id` set for De Una card to appear in enroll screen. Checked via 3-step query: match → field.club_id → club.owner_id → owner_profiles. PostgREST cannot auto-infer clubs→owner_profiles join (no direct FK).
+- **enrollment.payment_method**: `'in_person'` (pending at rest, confirmed at attendance) vs `'in_app'` (cancelled on payment failure, slot freed immediately). Always pass on enrollment insert.
+- **Enrollment unique constraint**: partial index `enrollments_match_user_active_idx` — only blocks duplicate active enrollments. Cancelled/refunded rows allow re-enrollment.
+- **pg_cron auth**: cron jobs call Edge Functions via `net.http_post`. Must include `Authorization: Bearer <service_role_JWT>` header (starts with `eyJ`). `sb_secret_...` format is NOT a valid JWT — use the actual service role key from Settings → API.
 - **`ALTER TYPE ... ADD VALUE`**: must be in a separate migration from any statements that USE the new enum value. Postgres SQLSTATE 55P04 otherwise. See migrations 13 + 14 for the split pattern.
 
 ---
 
 ## What's NOT Built Yet (V1 scope remaining)
 
-- Payment integration (provider TBD: Stripe or Kushki — PayPhone eliminated). **Apple Pay is a V1 requirement.** Must use native payment sheet SDK (`@stripe/stripe-react-native` or `@kushki/kushki-checkout-react-native`), not a WebView redirect. Requires Apple Merchant ID in App Store Connect before TestFlight build.
-- Player withdrawal reimbursement — withdrawal UI is live but the actual refund call is a stub (`// TODO: trigger refund via payment Edge Function`). Needs payment provider wired up first.
-- Admin panel — mostly done; still missing:
-  - Manual refund tooling (refunds page is a stub)
-- Push notifications
-- Player Pro subscription flow
-- Club creation flow on mobile (currently web-only via `/dashboard/clubs/new`)
-- Field creation flow on mobile (currently web-only via `/dashboard/fields/new`)
-- ~~Supabase Storage setup (field images, avatars)~~ ✓ Done
-- ~~Match state automation (en_curso, jugado)~~ ✓ Done
+- **De Una credentials** (business task, not code) — Register cancha. as Marketplace Partner on De Una developer portal. Get `DEUNA_MASTER_TOKEN`, `DEUNA_API_URL`, `DEUNA_WEBHOOK_SECRET`. Set as Supabase Edge Function secrets. Register webhook URL in De Una portal. Without this, payment flow is built but non-functional.
+- **De Una refund API** — When match is cancelled with paid enrollments, refund call is a stub (`// TODO: trigger De Una refund`). Needs De Una credentials + refund endpoint confirmed.
+- **Push notifications** — No real-time alerts for match confirmation, cancellation, payment confirmation. Players must check app manually.
+- **Club creation on mobile** — Currently web-only via `/dashboard/clubs/new`
+- **Field creation on mobile** — Currently web-only via `/dashboard/fields/new`
+- **Player Pro subscription flow** — `users.is_pro` column exists but no purchase flow
+- **Admin manual refund tooling** — Refunds page is a stub
+- ~~Payment integration~~ ✓ De Una QR payments built (pending credentials)
+- ~~Supabase Storage setup~~ ✓ Done
+- ~~Match state automation~~ ✓ Done (triggers + 1-min crons + client virtual state)
 - ~~Clubs/Complejos structure~~ ✓ Done
 
 ---
@@ -295,6 +318,7 @@ Key routing rules:
 
 | Date | What was done |
 |---|---|
+| 2026-06-04 | **Match state machine, cron infrastructure, enrollment fixes, UX**: Migrations 24–30. Migration 24: owner_profiles public read for De Una gate. Migration 25: partial unique index on enrollments (allows re-enrollment after cancellation). Migration 26: trigger re-evaluates confirmed match on withdrawal (revert to open / cancel based on count + deadline). Migration 27: instant auto-confirm trigger replaces 5-min cron. Migration 28: cron intervals reduced to 1 min. Migration 29: payment_method column on enrollments (in_person/in_app). Migration 30: backfill stale match states (pg_cron was never enabled). Webhook: De Una payment failure now cancels enrollment (not revert to pending). Zombie cron: same change. Match detail: getEffectiveStatus() virtual state for instant en_curso/jugado display + new orange/grey badges. Explore: mandatory day selection, defaults to today, no deselect. Deadline validation fix: compares against kickoff datetime not date-only (timezone bug). pg_cron fixed: was never enabled, cron jobs had invalid JWT auth. All 5 Edge Functions deployed. |
 | 2026-06-03 | **De Una payment integration (complete)**: Migrations 22+23. Edge Functions `create-deuna-payment` (12 tests) and `deuna-webhook` (11 tests, added failed/expired path resetting enrollment to pending). Mobile: `enroll.tsx` in_app enabled with credential gate (De Una card hidden if owner has no merchant ID), navigation to `/payment/deuna`. New `app/payment/deuna.tsx` QR screen with AppState listener, 5s polling, "Abrir De Una" deep link, "Verificar pago" button at 10s, countdown timer. Old `match/[id]/payment.tsx` removed. T7: mobile owner profile De Una Negocios section (merchant ID + phone, Activo badge); web `/dashboard/settings` + `DeunaSettingsForm` client component + nav item. T8: `auto-cancel-matches` zombie cleanup (payment_pending → pending after 25 min); also fixed to include payment_pending in match-cancellation refund sweep. `database.types.ts` updated: clubs table, fields schema (club_id), match_status (en_curso/jugado), enrollment_status (payment_pending). Mobile now 0 TS errors (added `types/env.d.ts` for process.env, fixed post-match.tsx insert cast). |
 | 2026-05-09 | Initial scaffold: Turborepo monorepo, all packages, Expo Router mobile app, Next.js 14 web app, complete Supabase schema (5 migrations: schema + indexes + functions/triggers + RLS + seed), CLAUDE.md |
 | 2026-05-09 | Upgraded web app to Next.js 15 + React 19. Replaced `@supabase/auth-helpers-nextjs` with `@supabase/ssr`. Split Supabase client into `client.ts` / `server.ts` / `admin.ts`. Added session-refresh middleware. `next.config.ts` (TypeScript). Turbopack dev enabled. |

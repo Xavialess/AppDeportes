@@ -9,6 +9,12 @@ out
 build
 .expo
 .expo-shared
+*.tsbuildinfo
+
+# Documents
+*.docx
+*.xlsx
+*.pptx
 
 # Turbo
 .turbo

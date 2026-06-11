@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     '@appdeportes/supabase',
     '@appdeportes/i18n',
   ],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;

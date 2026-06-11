@@ -28,7 +28,12 @@ export async function createMatch(formData: FormData): Promise<CreateMatchResult
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (new Date(date) < today) {
+  // Parse date parts explicitly to avoid UTC-vs-local timezone shift.
+  // new Date("2026-06-06") parses as UTC midnight, which in UTC-5 is June 5
+  // at 19:00 local — causing today's date to be rejected.
+  const [year, month, day] = date.split('-').map(Number);
+  const matchDate = new Date(year, month - 1, day);
+  if (matchDate < today) {
     return { error: 'La fecha del partido debe ser hoy o en el futuro.' };
   }
 

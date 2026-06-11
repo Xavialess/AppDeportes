@@ -52,14 +52,19 @@ function dateToString(d: Date): string {
 }
 
 function isFutureDate(dateStr: string): boolean {
-  const d = new Date(dateStr);
-  return d > new Date();
+  // Parse as local date (not UTC) to avoid timezone shift rejecting today's date
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const matchDay = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return matchDay >= today;
 }
 
-function deadlineBeforeMatch(deadlineStr: string, dateStr: string): boolean {
+function deadlineBeforeKickoff(deadlineStr: string, dateStr: string, startTimeStr: string): boolean {
   const deadline = new Date(deadlineStr.replace(' ', 'T'));
-  const matchDate = new Date(dateStr);
-  return deadline < matchDate;
+  // Build kickoff as local datetime to avoid UTC-vs-local shift
+  const kickoff = new Date(`${dateStr}T${startTimeStr}`);
+  return deadline < kickoff;
 }
 
 export default function PostMatchScreen() {
@@ -201,7 +206,7 @@ export default function PostMatchScreen() {
   function validate(): string | null {
     if (fields.length === 0) return 'No tienes canchas registradas.';
     if (!date) return 'La fecha es obligatoria.';
-    if (!isFutureDate(date)) return 'La fecha debe ser en el futuro.';
+    if (!isFutureDate(date)) return 'La fecha debe ser hoy o en el futuro.';
     if (!startTime) return 'La hora de inicio es obligatoria.';
     if (!endTime) return 'La hora de fin es obligatoria.';
     if (startTime >= endTime) return 'La hora de fin debe ser posterior a la de inicio.';
@@ -219,7 +224,7 @@ export default function PostMatchScreen() {
       if (isNaN(max) || max < 1) return 'Jugadores máximos inválidos.';
       if (min > max) return 'Los jugadores mínimos no pueden superar los máximos.';
       if (!confirmationDeadline) return 'El plazo de confirmación es obligatorio.';
-      if (!deadlineBeforeMatch(confirmationDeadline, date)) return 'El plazo debe ser antes del partido.';
+      if (!deadlineBeforeKickoff(confirmationDeadline, date, startTime)) return 'El plazo debe ser antes de la hora de inicio del partido.';
     }
 
     if (matchType === 'reservation') {

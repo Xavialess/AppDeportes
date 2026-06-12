@@ -1,6 +1,0 @@
-{
-  "framework": "nextjs",
-  "outputDirectory": "apps/web/.next",
-  "buildCommand": "pnpm run build --filter=@appdeportes/web...",
-  "installCommand": "pnpm install --frozen-lockfile"
-}

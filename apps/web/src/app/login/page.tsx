@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import styles from './login.module.css';
 import { LoginForm } from './LoginForm';
+import { SportBackground } from '@/components/SportBackground';
 
 export const metadata: Metadata = {
   title: 'Iniciar sesión — cancha.',
@@ -20,11 +22,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <main className={styles.page}>
+      <SportBackground />
+
       <section className={styles.card} aria-labelledby="login-heading">
         <div className={styles.brand}>
           <span className={styles.brandName}>
             cancha<span className={styles.brandDot}>.</span>
           </span>
+          <p className={styles.brandTagline}>Tu próximo partido empieza acá</p>
         </div>
 
         <h1 id="login-heading" className={styles.heading}>
@@ -44,8 +49,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <LoginForm />
 
         <p className={styles.footerNote}>
-          ¿Problemas para acceder?{' '}
-          <a href="mailto:soporte@cancha.ec">Contacta al soporte</a>
+          ¿Eres propietario y no tienes cuenta?{' '}
+          <Link href="/signup">Regístrate aquí</Link>
         </p>
       </section>
     </main>

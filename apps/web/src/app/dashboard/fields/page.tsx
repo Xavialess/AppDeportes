@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { LayoutGrid } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import styles from './fields.module.css';
 
@@ -90,7 +91,7 @@ export default async function FieldsPage() {
         </ul>
       ) : (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>🏟️</div>
+          <div className={styles.emptyIcon}><LayoutGrid size={40} strokeWidth={1.25} /></div>
           <p className={styles.emptyTitle}>Sin canchas registradas</p>
           <p className={styles.emptyText}>
             Primero crea un complejo y luego agrega canchas desde su página de detalle.

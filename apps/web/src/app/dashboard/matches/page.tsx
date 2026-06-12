@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { MapPin, Calendar, Clock, Users, DollarSign } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import styles from './matches.module.css';
 
@@ -50,6 +51,11 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function formatMonthGroup(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return d.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+}
+
 function formatTime(timeStr: string): string {
   return timeStr.slice(0, 5);
 }
@@ -79,19 +85,17 @@ export default async function MatchesPage() {
     .eq('owner_id', user.id);
   const ownerClubIds = (clubsForOwner ?? []).map(c => c.id);
 
-  const { data: fieldsData, error: fieldsError } = ownerClubIds.length > 0
+  const { data: fieldsData } = ownerClubIds.length > 0
     ? await supabase
         .from('fields')
         .select('id, name')
         .in('club_id', ownerClubIds)
     : { data: [], error: null };
 
-
-
   const fieldIds = (fieldsData ?? []).map((f) => f.id);
   const fieldMap = Object.fromEntries((fieldsData ?? []).map((f) => [f.id, f.name]));
 
-  // Fetch matches for this owner with sport info
+  // Fetch matches with sport info
   const { data: matchesRaw } = fieldIds.length > 0
     ? await supabase
         .from('matches')
@@ -106,8 +110,6 @@ export default async function MatchesPage() {
         .order('date', { ascending: false })
         .order('start_time', { ascending: false })
     : { data: [], error: null };
-
-
 
   // Count matches this month
   const now = new Date();
@@ -144,6 +146,18 @@ export default async function MatchesPage() {
       field_name: fieldMap[m.field_id] ?? '—',
     };
   });
+
+  // Group matches by month (YYYY-MM key, descending — most recent first)
+  const grouped: { key: string; label: string; items: MatchRow[] }[] = [];
+  for (const match of matches) {
+    const key = match.date.slice(0, 7);
+    const last = grouped[grouped.length - 1];
+    if (last?.key === key) {
+      last.items.push(match);
+    } else {
+      grouped.push({ key, label: formatMonthGroup(match.date), items: [match] });
+    }
+  }
 
   return (
     <>
@@ -183,7 +197,6 @@ export default async function MatchesPage() {
         </div>
       )}
 
-      {/* Upgrade nudge — show when at 80%+ of plan limit */}
       {plan !== null && maxMatches > 0 && matchesThisMonth >= Math.floor(maxMatches * 0.8) && (
         <div className={styles.upgradeBanner} role="alert">
           <span className={styles.upgradeBannerText}>
@@ -227,104 +240,83 @@ export default async function MatchesPage() {
           )}
         </div>
       ) : (
-        <ul className={styles.matchList} role="list">
-          {matches.map((match) => (
-            <li key={match.id} className={styles.matchCard}>
-              <Link href={`/dashboard/matches/${match.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-              <div className={styles.matchMain}>
-                <div className={styles.matchTopRow}>
-                  <span className={styles.matchTitle}>
-                    <span className={styles.sportTag}>{match.sport_name}</span>
-                    {match.format ? ` · ${match.format}` : ''}
-                  </span>
-                  <div className={styles.badgesRow}>
-                    <span
-                      className={`${styles.badge} ${match.type === 'open' ? styles.badgeTypeOpen : styles.badgeTypeReservation}`}
-                    >
-                      {match.type === 'open' ? 'Individual' : 'Reserva completa'}
-                    </span>
-                    <span className={`${styles.badge} ${STATUS_CLASS[match.status]}`}>
-                      {STATUS_LABELS[match.status]}
-                    </span>
-                  </div>
-                </div>
+        <div className={styles.matchList}>
+          {grouped.map((group) => (
+            <div key={group.key}>
+              <div className={styles.monthDivider}>{group.label}</div>
+              <ul role="list" className={styles.monthGroup}>
+                {group.items.map((match) => (
+                  <li key={match.id} className={styles.matchCard}>
+                    <Link href={`/dashboard/matches/${match.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                      <div className={styles.matchMain}>
+                        <div className={styles.matchTopRow}>
+                          <span className={styles.matchTitle}>
+                            <span className={styles.sportTag}>{match.sport_name}</span>
+                            {match.format ? ` · ${match.format}` : ''}
+                          </span>
+                          <div className={styles.badgesRow}>
+                            <span
+                              className={`${styles.badge} ${match.type === 'open' ? styles.badgeTypeOpen : styles.badgeTypeReservation}`}
+                            >
+                              {match.type === 'open' ? 'Individual' : 'Reserva completa'}
+                            </span>
+                            <span className={`${styles.badge} ${STATUS_CLASS[match.status]}`}>
+                              {STATUS_LABELS[match.status]}
+                            </span>
+                          </div>
+                        </div>
 
-                <div className={styles.matchMeta}>
-                  <span className={styles.matchMetaItem}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:4}}>
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    {match.field_name}
-                  </span>
-                  <span className={styles.matchMetaItem}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:4}}>
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/>
-                      <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    {formatDate(match.date)}
-                  </span>
-                  <span className={styles.matchMetaItem}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:4}}>
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    {formatTime(match.start_time)} – {formatTime(match.end_time)}
-                  </span>
-                  {match.type === 'open' && match.max_players != null && (
-                    <span className={styles.matchMetaItem}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:4}}>
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                      </svg>
-                      {match.enrolled_count}/{match.max_players} jugadores
-                    </span>
-                  )}
-                  {match.type === 'open' && match.price_per_player != null && (
-                    <span className={styles.matchMetaItem}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:4}}>
-                        <line x1="12" y1="1" x2="12" y2="23"/>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                      </svg>
-                      ${match.price_per_player} c/u
-                    </span>
-                  )}
-                  {match.type === 'reservation' && match.total_price != null && (
-                    <span className={styles.matchMetaItem}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:4}}>
-                        <line x1="12" y1="1" x2="12" y2="23"/>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                      </svg>
-                      ${match.total_price} total
-                    </span>
-                  )}
-                </div>
-              </div>
-              </Link>
+                        <div className={styles.matchMeta}>
+                          <span className={styles.matchMetaItem}>
+                            <MapPin size={13} />
+                            {match.field_name}
+                          </span>
+                          <span className={styles.matchMetaItem}>
+                            <Calendar size={13} />
+                            {formatDate(match.date)}
+                          </span>
+                          <span className={styles.matchMetaItem}>
+                            <Clock size={13} />
+                            {formatTime(match.start_time)} – {formatTime(match.end_time)}
+                          </span>
+                          {match.type === 'open' && match.max_players != null && (
+                            <span className={styles.matchMetaItem}>
+                              <Users size={13} />
+                              {match.enrolled_count}/{match.max_players} jugadores
+                            </span>
+                          )}
+                          {match.type === 'open' && match.price_per_player != null && (
+                            <span className={styles.matchMetaItem}>
+                              <DollarSign size={13} />
+                              {match.price_per_player} c/u
+                            </span>
+                          )}
+                          {match.type === 'reservation' && match.total_price != null && (
+                            <span className={styles.matchMetaItem}>
+                              <DollarSign size={13} />
+                              {match.total_price} total
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
 
-              <div className={styles.matchActions}>
-                <Link
-                  href={`/dashboard/matches/${match.id}`}
-                  className={styles.actionLink}
-                >
-                  Ver inscritos
-                </Link>
-                {(match.status === 'open' || match.status === 'confirmed') && (
-                  <Link
-                    href={`/dashboard/matches/${match.id}?cancel=1`}
-                    className={`${styles.actionLink} ${styles.actionLinkDanger}`}
-                  >
-                    Cancelar
-                  </Link>
-                )}
-              </div>
-            </li>
+                    {(match.status === 'open' || match.status === 'confirmed') && (
+                      <div className={styles.matchActions}>
+                        <Link
+                          href={`/dashboard/matches/${match.id}?cancel=1`}
+                          className={`${styles.actionLink} ${styles.actionLinkDanger}`}
+                        >
+                          Cancelar
+                        </Link>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </>
   );

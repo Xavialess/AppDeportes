@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Building2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import styles from '../fields/fields.module.css';
 
@@ -84,7 +85,7 @@ export default async function ClubsPage() {
         </ul>
       ) : (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>🏟️</div>
+          <div className={styles.emptyIcon}><Building2 size={40} strokeWidth={1.25} /></div>
           <p className={styles.emptyTitle}>Sin complejos registrados</p>
           <p className={styles.emptyText}>
             Registra tu primer complejo deportivo para organizar tus canchas.

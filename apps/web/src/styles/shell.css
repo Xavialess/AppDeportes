@@ -62,7 +62,6 @@
   transition: background var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out);
   text-decoration: none;
-  cursor: default;
 }
 
 .navItem:hover {

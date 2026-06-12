@@ -79,8 +79,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users away from login page
-  if (user && pathname === '/login') {
+  // Redirect authenticated users away from auth pages
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     const redirectTo = request.nextUrl.searchParams.get('redirectTo') ?? '/dashboard';
     const url = request.nextUrl.clone();
     url.pathname = redirectTo;

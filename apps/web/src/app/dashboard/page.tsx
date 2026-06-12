@@ -2,12 +2,18 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Calendar, Users, MapPin, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import styles from '@/app/(dashboard)/dashboard.module.css';
 
 export const metadata: Metadata = {
   title: 'Panel — cancha.',
 };
+
+function formatDate(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return d.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short' });
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -39,6 +45,7 @@ export default async function DashboardPage() {
 
   // Current month bounds
   const now = new Date();
+  const today = now.toISOString().slice(0, 10);
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
   // Matches this month (non-cancelled)
@@ -51,7 +58,7 @@ export default async function DashboardPage() {
         .gte('date', monthStart)
     : { count: 0 };
 
-  // Active enrollments: get match IDs first, then count enrollments
+  // Active enrollments
   let enrollmentsCount = 0;
   if (fieldIds.length > 0) {
     const { data: matchRows } = await supabase
@@ -72,6 +79,54 @@ export default async function DashboardPage() {
       enrollmentsCount = count ?? 0;
     }
   }
+
+  // Upcoming open/confirmed matches (next 3)
+  const { data: upcomingRaw } = fieldIds.length > 0
+    ? await supabase
+        .from('matches')
+        .select('id, date, start_time, end_time, status, format, max_players, sports(name), fields(name), enrollments(id, status)')
+        .in('field_id', fieldIds)
+        .in('status', ['open', 'confirmed'])
+        .gte('date', today)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(3)
+    : { data: [] };
+
+  type UpcomingMatch = {
+    id: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+    format: string | null;
+    max_players: number | null;
+    sportName: string;
+    fieldName: string;
+    enrolledCount: number;
+  };
+
+  const upcoming: UpcomingMatch[] = (upcomingRaw ?? []).map((m) => {
+    const enrollments = (m.enrollments as Array<{ id: string; status: string }> | null) ?? [];
+    const activeCount = enrollments.filter(e => e.status !== 'cancelled' && e.status !== 'refunded').length;
+    return {
+      id: m.id,
+      date: m.date,
+      start_time: m.start_time,
+      end_time: m.end_time,
+      status: m.status,
+      format: m.format,
+      max_players: m.max_players,
+      sportName: (m.sports as { name: string } | null)?.name ?? '—',
+      fieldName: (m.fields as { name: string } | null)?.name ?? '—',
+      enrolledCount: activeCount,
+    };
+  });
+
+  const STATUS_COLOR: Record<string, string> = {
+    open: 'var(--color-accent)',
+    confirmed: '#60a5fa',
+  };
 
   const STATS = [
     {
@@ -101,7 +156,7 @@ export default async function DashboardPage() {
     <>
       <header className={styles.pageHeader}>
         <span className={styles.welcomeTag}>Panel de control</span>
-        <h1 className={styles.pageTitle}>Hola, {firstName} 👋</h1>
+        <h1 className={styles.pageTitle}>Hola, {firstName}</h1>
         <p className={styles.pageSubtitle}>
           Aquí tienes el resumen de tu actividad este mes.
         </p>
@@ -123,6 +178,68 @@ export default async function DashboardPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section aria-labelledby="upcoming-heading" className={styles.upcomingSection}>
+        <div className={styles.upcomingHeader}>
+          <h2 id="upcoming-heading" className={styles.upcomingTitle}>Próximos partidos</h2>
+          <Link href="/dashboard/matches" className={styles.upcomingSeeAll}>
+            Ver todos →
+          </Link>
+        </div>
+
+        {upcoming.length === 0 ? (
+          <div className={styles.upcomingEmpty}>
+            <div className={styles.upcomingEmptyInner}>
+              <Calendar size={20} style={{ color: 'rgba(255,255,255,0.25)', marginBottom: '0.5rem' }} />
+              <p className={styles.upcomingEmptyText}>No tienes partidos próximos.</p>
+              {fieldsCount > 0 && (
+                <Link href="/dashboard/matches/new" className={styles.upcomingPostBtn}>
+                  <Plus size={14} />
+                  Publicar partido
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : (
+          <ul className={styles.upcomingList} role="list">
+            {upcoming.map((m) => (
+              <li key={m.id}>
+                <Link href={`/dashboard/matches/${m.id}`} className={styles.upcomingCard}>
+                  <div
+                    className={styles.upcomingAccentBar}
+                    style={{ background: STATUS_COLOR[m.status] ?? 'var(--color-accent)' } as CSSProperties}
+                  />
+                  <div className={styles.upcomingCardBody}>
+                    <div className={styles.upcomingSportRow}>
+                      <span className={styles.upcomingSportTag}>{m.sportName}</span>
+                      {m.format && <span className={styles.upcomingFormat}>{m.format}</span>}
+                    </div>
+                    <div className={styles.upcomingMeta}>
+                      <span className={styles.upcomingMetaItem}>
+                        <Calendar size={12} />
+                        {formatDate(m.date)}
+                      </span>
+                      <span className={styles.upcomingMetaItem}>
+                        <MapPin size={12} />
+                        {m.fieldName}
+                      </span>
+                      {m.max_players != null && (
+                        <span className={styles.upcomingMetaItem}>
+                          <Users size={12} />
+                          {m.enrolledCount}/{m.max_players}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.upcomingTime}>
+                    {m.start_time.slice(0, 5)}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   );

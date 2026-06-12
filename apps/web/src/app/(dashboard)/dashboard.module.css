@@ -167,6 +167,169 @@
   font-size: var(--text-sm);
 }
 
+/* ─── Upcoming matches section ───────────────────────────────────────────── */
+.upcomingSection {
+  margin-top: var(--space-8);
+}
+
+.upcomingHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.upcomingTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.upcomingSeeAll {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.upcomingSeeAll:hover {
+  opacity: 0.75;
+  text-decoration: none;
+}
+
+.upcomingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.upcomingCard {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  overflow: hidden;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.upcomingCard:hover {
+  border-color: var(--color-border-2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+}
+
+.upcomingAccentBar {
+  width: 3px;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+
+.upcomingCardBody {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) 0;
+}
+
+.upcomingSportRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.upcomingSportTag {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(212, 255, 58, 0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.upcomingFormat {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.upcomingMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.upcomingMetaItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.upcomingTime {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-5) var(--space-4) 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.upcomingEmpty {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-8);
+}
+
+.upcomingEmptyInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.upcomingEmptyText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.upcomingPostBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.upcomingPostBtn:hover {
+  opacity: 0.88;
+  text-decoration: none;
+}
+
 /* ─── Mobile responsive — dashboard-specific overrides ───────────────────── */
 @media (max-width: 768px) {
   .userInfo {

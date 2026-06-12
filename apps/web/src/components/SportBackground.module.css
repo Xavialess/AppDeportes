@@ -1,0 +1,69 @@
+/* ─── Sport tile background ───────────────────────────────────────────────── */
+.wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.grid {
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  display: grid;
+  transform: rotate(-8deg);
+  transform-origin: top left;
+}
+
+.tile {
+  width: 140px;
+  height: 140px;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* ─── Vignettes ───────────────────────────────────────────────────────────── */
+.vigTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to bottom, rgba(10, 10, 10, 0.65) 0%, transparent 100%);
+}
+
+.vigBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.78) 0%, transparent 100%);
+}
+
+.vigLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 22%;
+  background: linear-gradient(to right, rgba(10, 10, 10, 0.72) 0%, transparent 100%);
+}
+
+.vigRight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 22%;
+  background: linear-gradient(to left, rgba(10, 10, 10, 0.72) 0%, transparent 100%);
+}
+
+.vigCenter {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.28);
+}

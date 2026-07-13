@@ -110,6 +110,33 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_messages: {
+        Row: {
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+        }
+        Insert: {
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+        }
+        Update: {
+          contact_type?: Database["public"]["Enums"]["contact_type"]
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+        }
+        Relationships: []
+      }
       crm_leads: {
         Row: {
           assigned_to: string | null
@@ -675,6 +702,7 @@ export type Database = {
       }
     }
     Enums: {
+      contact_type: "player" | "owner" | "other"
       enrollment_status: "pending" | "payment_pending" | "confirmed" | "cancelled" | "refunded"
       match_status: "open" | "confirmed" | "en_curso" | "jugado" | "completed" | "cancelled"
       match_type: "open" | "reservation"

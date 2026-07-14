@@ -5,7 +5,7 @@ import { OwnerSpotlight } from '@/components/marketing/owner-spotlight/OwnerSpot
 import { CtaBand } from '@/components/marketing/cta-band/CtaBand';
 
 export const metadata: Metadata = {
-  title: 'cancha. — Encuentra partidos de deportes en Ecuador',
+  title: { absolute: 'cancha. — Encuentra partidos de deportes en Ecuador' },
 };
 
 export default function HomePage() {

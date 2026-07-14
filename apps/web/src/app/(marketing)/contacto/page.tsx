@@ -4,7 +4,7 @@ import { ContactForm } from './ContactForm';
 import styles from './contact.module.css';
 
 export const metadata: Metadata = {
-  title: 'Contacto — cancha.',
+  title: { absolute: 'Contacto — cancha.' },
   description:
     'Escríbenos tus preguntas sobre cancha., para jugadores o propietarios de canchas en Ecuador.',
 };

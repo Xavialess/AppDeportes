@@ -1,0 +1,77 @@
+.section {
+  scroll-margin-top: 96px;
+  padding: var(--space-16) var(--space-6);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.reveal {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-section);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+}
+
+.subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-8);
+}
+
+.badges {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-md);
+  opacity: 0.55;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.badgeLabel {
+  font-size: 0.65rem;
+  color: var(--color-text-dim);
+}
+
+.badgeStore {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.contactPrompt {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.contactLink {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .badges {
+    flex-direction: column;
+    align-items: center;
+  }
+}

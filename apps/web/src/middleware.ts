@@ -79,8 +79,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  // Redirect authenticated users away from auth pages, but not when they landed
+  // here due to an authorization error (would loop back to /dashboard for non-owners)
+  const hasAuthError = request.nextUrl.searchParams.has('error');
+  if (user && !hasAuthError && (pathname === '/login' || pathname === '/signup')) {
     const redirectTo = request.nextUrl.searchParams.get('redirectTo') ?? '/dashboard';
     const url = request.nextUrl.clone();
     url.pathname = redirectTo;

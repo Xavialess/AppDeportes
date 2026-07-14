@@ -160,6 +160,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.43.0
         version: 2.105.4
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
       i18next:
         specifier: ^23.11.0
         version: 23.16.8
@@ -2831,6 +2834,9 @@ packages:
   graphql@15.8.0:
     resolution: {integrity: sha512-5gghUc24tP9HRznNpV2+FIoq3xKkj5dTQqf4v0CpdPbFVwFkWoxOM+o+2OC9ZSvjEMTjfmG9QT+gcvggTwW1zw==}
     engines: {node: '>= 10.x'}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   has-bigints@1.1.0:
     resolution: {integrity: sha512-R3pbpkcIqv2Pm3dUwgjclDRVmWpTJW2DcMzcIhEXEx1oh/CEMObMm3KLmRJOdvhM7o4uQBnwr8pzRK2sJWIqfg==}
@@ -8389,6 +8395,8 @@ snapshots:
       tslib: 2.8.1
 
   graphql@15.8.0: {}
+
+  gsap@3.15.0: {}
 
   has-bigints@1.1.0: {}
 

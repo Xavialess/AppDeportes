@@ -58,6 +58,7 @@ export default function OwnerLayout() {
       />
       <Tabs.Screen name="post-match" options={hiddenScreen} />
       <Tabs.Screen name="my-match" options={hiddenScreen} />
+      <Tabs.Screen name="edit-match" options={hiddenScreen} />
       <Tabs.Screen name="my-field" options={hiddenScreen} />
       <Tabs.Screen name="club" options={hiddenScreen} />
     </Tabs>

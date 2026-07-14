@@ -311,6 +311,7 @@ export default function OwnerMatchDetailScreen() {
   const canMarkAttendance = match.status === 'confirmed' || match.status === 'en_curso' || match.status === 'jugado' || match.status === 'completed';
   const canComplete = match.status === 'confirmed';
   const canCancel = match.status === 'open' || match.status === 'confirmed';
+  const canEdit = match.status === 'open' || match.status === 'confirmed';
   const enrolled = match.enrolled_count ?? enrollments.length;
   const max = match.max_players;
 
@@ -395,6 +396,17 @@ export default function OwnerMatchDetailScreen() {
         </View>
 
         <View style={styles.actionsContainer}>
+          {/* Edit match — only when open or confirmed */}
+          {canEdit && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => router.push(`/(owner)/edit-match/${match.id}` as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.editButtonText}>Editar partido</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Hide / show toggle — works for any match status */}
           <TouchableOpacity
             style={[styles.visibilityButton, togglingVisibility && styles.buttonDisabled]}
@@ -773,6 +785,19 @@ const styles = StyleSheet.create({
   actionsContainer: {
     gap: spacing.sm,
     marginBottom: spacing.xl,
+  },
+  editButton: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  editButtonText: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
   },
   visibilityButton: {
     backgroundColor: colors.card2,

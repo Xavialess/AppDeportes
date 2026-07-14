@@ -76,6 +76,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
   const match = matchRaw as typeof matchRaw & { status: MatchStatus };
   const sport = matchRaw.sports as { name: string } | null;
   const canCancel = match.status === 'open' || match.status === 'confirmed';
+  const canEdit = match.status === 'open' || match.status === 'confirmed';
   const showAttendance = match.status === 'confirmed' || match.status === 'en_curso' || match.status === 'jugado' || match.status === 'completed';
 
   return (
@@ -87,9 +88,16 @@ export default async function MatchDetailPage({ params }: PageProps) {
             {sport?.name ?? '—'}{match.format ? ` · ${match.format}` : ''}
           </h1>
         </div>
-        {canCancel && (
-          <CancelButton matchId={id} />
-        )}
+        <div className={styles.headerActions}>
+          {canEdit && (
+            <Link href={`/dashboard/matches/${id}/edit`} className={styles.editLink}>
+              Editar
+            </Link>
+          )}
+          {canCancel && (
+            <CancelButton matchId={id} />
+          )}
+        </div>
       </header>
 
       <div className={styles.detailGrid}>

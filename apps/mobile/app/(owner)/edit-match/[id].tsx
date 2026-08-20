@@ -8,13 +8,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { colors, radius, spacing } from '../../../lib/theme';
+import CanchaLoader from '../../../components/CanchaLoader';
 
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -379,7 +380,7 @@ export default function EditMatchScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -399,7 +400,7 @@ export default function EditMatchScreen() {
     return (
       <View style={styles.centered}>
         <View style={styles.successCircle}>
-          <Text style={styles.successCheck}>✓</Text>
+          <Ionicons name="checkmark" size={36} color={colors.accentFg} />
         </View>
         <Text style={styles.successTitle}>¡Cambios guardados!</Text>
         <Text style={styles.successText}>Volviendo al partido…</Text>
@@ -770,7 +771,7 @@ export default function EditMatchScreen() {
           activeOpacity={0.8}
         >
           {submitting ? (
-            <ActivityIndicator color={colors.accentFg} />
+            <CanchaLoader variant="button" />
           ) : (
             <Text style={styles.saveButtonText}>Guardar cambios</Text>
           )}
@@ -913,7 +914,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  successCheck: { fontSize: 36, color: colors.accentFg, fontWeight: '700' },
   successTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginBottom: spacing.sm, textAlign: 'center' },
   successText: { fontSize: 14, color: colors.mute, textAlign: 'center' },
 });

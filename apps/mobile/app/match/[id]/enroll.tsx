@@ -5,14 +5,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useSession';
 import { colors, radius, spacing } from '../../../lib/theme';
 import { formatPrice } from '../../../lib/format';
+import CanchaLoader from '../../../components/CanchaLoader';
 
 // ---- types ---------------------------------------------------------------
 
@@ -230,7 +231,7 @@ export default function EnrollScreen() {
     return (
       <View style={styles.centered}>
         <Stack.Screen options={stackOptions} />
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -252,7 +253,7 @@ export default function EnrollScreen() {
       <View style={styles.successContainer}>
         <Stack.Screen options={{ ...stackOptions, title: 'Confirmación' }} />
         <View style={styles.successIcon}>
-          <Text style={styles.successIconText}>✓</Text>
+          <Ionicons name="checkmark" size={32} color={colors.accentFg} />
         </View>
         <Text style={styles.successTitle}>¡Inscripción confirmada!</Text>
         <Text style={styles.successSubtitle}>
@@ -380,7 +381,7 @@ export default function EnrollScreen() {
           activeOpacity={0.8}
         >
           {screenState === 'confirming' ? (
-            <ActivityIndicator color={colors.accentFg} />
+            <CanchaLoader variant="button" />
           ) : (
             <Text style={styles.ctaButtonText}>
               {selectedMethod
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   deunaTag: {
-    backgroundColor: '#00C6A2',
+    backgroundColor: colors.deunaBrand,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.badge,
@@ -607,11 +608,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
-  },
-  successIconText: {
-    fontSize: 32,
-    color: colors.accentFg,
-    fontWeight: '800',
   },
   successTitle: {
     fontSize: 24,

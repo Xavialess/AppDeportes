@@ -3,6 +3,7 @@ import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nextProvider } from 'react-i18next';
+import { useFonts, Archivo_800ExtraBold } from '@expo-google-fonts/archivo';
 import i18n from '@appdeportes/i18n';
 import { useSession } from '../hooks/useSession';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -60,6 +61,14 @@ function SessionGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({ Archivo_800ExtraBold });
+
+  // Native splash (preventAutoHideAsync above) stays up until fonts are
+  // ready — avoids a flash of the system font on the wordmark/titles.
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <I18nextProvider i18n={i18n}>
       <StatusBar style="light" />

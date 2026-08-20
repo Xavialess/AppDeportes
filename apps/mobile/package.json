@@ -19,6 +19,7 @@
     "@appdeportes/types": "workspace:*",
     "@appdeportes/utils": "workspace:*",
     "@babel/runtime": "^7.29.2",
+    "@expo-google-fonts/archivo": "^0.4.2",
     "@expo/metro-runtime": "~3.2.3",
     "@expo/vector-icons": "~14.1.0",
     "@react-native-community/datetimepicker": "8.2.0",

@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   Image,
   Alert,
   RefreshControl,
@@ -14,9 +13,11 @@ import {
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useSession';
-import { colors, radius, spacing } from '../../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../../lib/theme';
+import CanchaLoader from '../../../components/CanchaLoader';
 
 interface Field {
   id: string;
@@ -45,6 +46,7 @@ export default function FieldDetailScreen() {
   const [uploading, setUploading] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   async function loadField() {
     if (!id || !user) return;
@@ -65,8 +67,13 @@ export default function FieldDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      loadField().finally(() => setLoading(false));
+      // Only show the full loading state on first load — a refocus keeps
+      // the last-known content on screen while it refreshes quietly underneath.
+      if (!hasDataRef.current) setLoading(true);
+      loadField().finally(() => {
+        hasDataRef.current = true;
+        setLoading(false);
+      });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, user?.id])
   );
@@ -176,7 +183,7 @@ export default function FieldDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -232,7 +239,7 @@ export default function FieldDetailScreen() {
             activeOpacity={0.8}
           >
             {uploading ? (
-              <ActivityIndicator size="small" color={colors.accentFg} />
+              <CanchaLoader variant="button" />
             ) : (
               <Text style={styles.uploadButtonText}>+ Agregar fotos</Text>
             )}
@@ -261,7 +268,7 @@ export default function FieldDetailScreen() {
                   <Image source={{ uri: url }} style={styles.thumbImage} resizeMode="cover" />
                   {isDeleting ? (
                     <View style={styles.thumbOverlay}>
-                      <ActivityIndicator size="small" color="#fff" />
+                      <CanchaLoader variant="button" />
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -269,7 +276,7 @@ export default function FieldDetailScreen() {
                       onPress={() => confirmDelete(url)}
                       hitSlop={8}
                     >
-                      <Text style={styles.deleteButtonText}>✕</Text>
+                      <Ionicons name="close" size={14} color="#fff" />
                     </TouchableOpacity>
                   )}
                   {index === 0 && (
@@ -343,6 +350,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.5,
   },
@@ -431,11 +439,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  deleteButtonText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '700',
   },
   coverBadge: {
     position: 'absolute',

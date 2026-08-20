@@ -12,110 +12,16 @@ import { router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useSession } from '../hooks/useSession';
 import { supabase } from '../lib/supabase';
+import { colors, fonts } from '../lib/theme';
+import { SPORT_TILES, TILE_SIZE, TILE_GAP, type SportTileDef } from '../lib/sportTiles';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
-const T = 155; // tile size px
-const G = 6;   // gap px
+const T = TILE_SIZE;
+const G = TILE_GAP;
 const COLS = 3;
 const ROWS = 6;
 
-const LINE  = 'rgba(255,255,255,0.13)';
-const LINE2 = 'rgba(255,255,255,0.08)';
-
-const abs = StyleSheet.create({
-  hLine:  { position: 'absolute', height: 1 },
-  vLine:  { position: 'absolute', width: 1 },
-  circle: { position: 'absolute', borderWidth: 1, backgroundColor: 'transparent' },
-  dot:    { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.22)' },
-  rect:   { position: 'absolute', borderWidth: 1, backgroundColor: 'transparent' },
-  netDot: { position: 'absolute', width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.28)' },
-});
-
-type SportDef = { from: string; to: string; lines: React.ReactNode };
-
-const SPORTS: SportDef[] = [
-  {
-    from: '#1a3a2a', to: '#0f1f15', // Fútbol
-    lines: (
-      <>
-        <View style={[abs.hLine, { top: T / 2, left: 0, right: 0, backgroundColor: LINE }]} />
-        <View style={[abs.circle, { width: 44, height: 44, borderRadius: 22, top: T / 2 - 22, left: T / 2 - 22, borderColor: LINE }]} />
-        <View style={[abs.dot, { top: T / 2 - 3, left: T / 2 - 3 }]} />
-        <View style={[abs.rect, { top: 10, left: T / 2 - 26, width: 52, height: 18, borderColor: LINE2 }]} />
-        <View style={[abs.rect, { bottom: 10, left: T / 2 - 26, width: 52, height: 18, borderColor: LINE2 }]} />
-      </>
-    ),
-  },
-  {
-    from: '#1a2a3a', to: '#0f151f', // Pádel
-    lines: (
-      <>
-        <View style={[abs.rect, { top: 12, left: 12, right: 12, bottom: 12, borderColor: LINE }]} />
-        <View style={[abs.hLine, { top: T / 2, left: 12, right: 12, height: 2, backgroundColor: LINE }]} />
-        <View style={[abs.hLine, { top: 40, left: 12, right: 12, backgroundColor: LINE2 }]} />
-        <View style={[abs.hLine, { bottom: 40, left: 12, right: 12, backgroundColor: LINE2 }]} />
-        <View style={[abs.vLine, { top: 40, bottom: 40, left: T / 2, backgroundColor: LINE2 }]} />
-        <View style={[abs.netDot, { top: T / 2 - 2.5, left: 8 }]} />
-        <View style={[abs.netDot, { top: T / 2 - 2.5, right: 8 }]} />
-      </>
-    ),
-  },
-  {
-    from: '#3a2f1a', to: '#1f180f', // Tenis
-    lines: (
-      <>
-        <View style={[abs.rect, { top: 10, left: 18, right: 18, bottom: 10, borderColor: LINE }]} />
-        <View style={[abs.hLine, { top: T / 2, left: 18, right: 18, height: 2, backgroundColor: LINE }]} />
-        <View style={[abs.hLine, { top: 34, left: 18, right: 18, backgroundColor: LINE2 }]} />
-        <View style={[abs.hLine, { bottom: 34, left: 18, right: 18, backgroundColor: LINE2 }]} />
-        <View style={[abs.vLine, { top: 34, bottom: 34, left: T / 2, backgroundColor: LINE2 }]} />
-        <View style={[abs.netDot, { top: T / 2 - 2.5, left: 14 }]} />
-        <View style={[abs.netDot, { top: T / 2 - 2.5, right: 14 }]} />
-      </>
-    ),
-  },
-  {
-    from: '#3a1a1a', to: '#1f0f0f', // Básquet
-    lines: (
-      <>
-        <View style={[abs.rect, { top: 12, left: 12, right: 12, bottom: 12, borderColor: LINE }]} />
-        <View style={[abs.vLine, { top: 12, bottom: 12, left: T / 2, backgroundColor: LINE }]} />
-        <View style={[abs.circle, { width: 36, height: 36, borderRadius: 18, top: T / 2 - 18, left: T / 2 - 18, borderColor: LINE2 }]} />
-        <View style={[abs.rect, { top: 12, left: T / 2 - 26, width: 52, height: 40, borderColor: LINE2 }]} />
-        <View style={[abs.circle, { width: 30, height: 30, borderRadius: 15, top: 40, left: T / 2 - 15, borderColor: LINE2 }]} />
-        <View style={[abs.rect, { top: 12, left: T / 2 - 10, width: 20, height: 4, borderColor: LINE }]} />
-      </>
-    ),
-  },
-  {
-    from: '#2a1a3a', to: '#150f1f', // Vóley
-    lines: (
-      <>
-        <View style={[abs.rect, { top: 12, left: 12, right: 12, bottom: 12, borderColor: LINE }]} />
-        <View style={[abs.hLine, { top: T / 2, left: 12, right: 12, height: 2, backgroundColor: LINE }]} />
-        <View style={[abs.hLine, { top: 28, left: 12, right: 12, backgroundColor: LINE2 }]} />
-        <View style={[abs.hLine, { bottom: 28, left: 12, right: 12, backgroundColor: LINE2 }]} />
-        <View style={[abs.circle, { width: 48, height: 48, borderRadius: 24, top: T / 2 - 24, left: T / 2 - 24, borderColor: LINE2 }]} />
-        <View style={[abs.netDot, { top: T / 2 - 2.5, left: 8 }]} />
-        <View style={[abs.netDot, { top: T / 2 - 2.5, right: 8 }]} />
-      </>
-    ),
-  },
-  {
-    from: '#0f2a3a', to: '#08151f', // Natación
-    lines: (
-      <>
-        <View style={[abs.rect, { top: 10, left: 10, right: 10, bottom: 10, borderColor: LINE }]} />
-        {[30, 52, 74, 96, 118].map((y) => (
-          <View key={y} style={[abs.hLine, { top: y, left: 10, right: 10, backgroundColor: LINE2 }]} />
-        ))}
-        <View style={[abs.vLine, { top: 10, bottom: 10, left: 22, backgroundColor: LINE2 }]} />
-        <View style={[abs.vLine, { top: 10, bottom: 10, right: 22, backgroundColor: LINE2 }]} />
-      </>
-    ),
-  },
-];
-
-function SportTile({ sport }: { sport: SportDef }) {
+function SportTile({ sport }: { sport: SportTileDef }) {
   return (
     <LinearGradient
       colors={[sport.from, sport.to]}
@@ -130,14 +36,21 @@ function SportTile({ sport }: { sport: SportDef }) {
 
 type UserRole = 'player' | 'owner' | 'admin';
 
+// Minimum time the splash stays on screen — just enough for the brand mark
+// to register on a fast session resolution, without gating navigation on
+// the full decorative animation (which keeps playing independently and
+// simply gets cut short by the navigation-triggered unmount when it does).
+const MIN_DISPLAY_MS = 400;
+
 export default function AppSplash() {
   const insets = useSafeAreaInsets();
   const { session, loading } = useSession();
+  const reducedMotion = useReducedMotion();
 
   // Refs so animation callback and session effect always see current values
-  const destination  = useRef<string | null>(null);
-  const animDone     = useRef(false);
-  const hasNavigated = useRef(false);
+  const destination    = useRef<string | null>(null);
+  const minTimeElapsed  = useRef(false);
+  const hasNavigated    = useRef(false);
 
   const tilesOpacity   = useRef(new Animated.Value(0)).current;
   const brandOpacity   = useRef(new Animated.Value(0)).current;
@@ -150,7 +63,7 @@ export default function AppSplash() {
 
   // Both paths call this — whichever arrives second triggers navigation
   function maybeNavigate() {
-    if (hasNavigated.current || !animDone.current || !destination.current) return;
+    if (hasNavigated.current || !minTimeElapsed.current || !destination.current) return;
     hasNavigated.current = true;
     router.replace(destination.current as never);
   }
@@ -179,27 +92,46 @@ export default function AppSplash() {
       });
   }, [session, loading]);
 
-  // Entrance animations — try to navigate when done
+  // Decorative entrance animation — purely visual, does not gate navigation.
+  // Respects reduced-motion by snapping straight to the end state.
   useEffect(() => {
+    if (reducedMotion) {
+      tilesOpacity.setValue(1);
+      brandOpacity.setValue(1);
+      brandY.setValue(0);
+      taglineOpacity.setValue(1);
+      taglineY.setValue(0);
+      return;
+    }
+
     Animated.timing(tilesOpacity, {
-      toValue: 1, duration: 900, delay: 100, useNativeDriver: true,
+      toValue: 1, duration: 600, delay: 60, useNativeDriver: true,
     }).start();
 
     Animated.parallel([
-      Animated.timing(brandOpacity, { toValue: 1, duration: 500, delay: 700, useNativeDriver: true }),
-      Animated.timing(brandY,       { toValue: 0, duration: 500, delay: 700, useNativeDriver: true }),
+      Animated.timing(brandOpacity, { toValue: 1, duration: 380, delay: 380, useNativeDriver: true }),
+      Animated.timing(brandY,       { toValue: 0, duration: 380, delay: 380, useNativeDriver: true }),
     ]).start();
 
     Animated.parallel([
-      Animated.timing(taglineOpacity, { toValue: 1, duration: 500, delay: 950, useNativeDriver: true }),
-      Animated.timing(taglineY,       { toValue: 0, duration: 500, delay: 950, useNativeDriver: true }),
-    ]).start(() => {
-      animDone.current = true;
+      Animated.timing(taglineOpacity, { toValue: 1, duration: 380, delay: 520, useNativeDriver: true }),
+      Animated.timing(taglineY,       { toValue: 0, duration: 380, delay: 520, useNativeDriver: true }),
+    ]).start();
+  }, [reducedMotion]);
+
+  // Navigation is gated on a short minimum display time instead of the full
+  // decorative animation, so a fast session resolution doesn't sit and wait
+  // out branding it doesn't need to.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      minTimeElapsed.current = true;
       maybeNavigate();
-    });
+    }, MIN_DISPLAY_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const tiles = Array.from({ length: COLS * ROWS }, (_, i) => SPORTS[i % SPORTS.length]);
+  const tiles = Array.from({ length: COLS * ROWS }, (_, i) => SPORT_TILES[i % SPORT_TILES.length]);
 
   return (
     <View style={s.screen} onLayout={() => void SplashScreen.hideAsync()}>
@@ -257,7 +189,7 @@ export default function AppSplash() {
 const s = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.bg,
     overflow: 'hidden',
   },
   tilesGrid: {
@@ -292,13 +224,14 @@ const s = StyleSheet.create({
   brandName: {
     fontSize: 42,
     fontWeight: '700',
+    fontFamily: fonts.display,
     letterSpacing: -0.5,
-    color: '#fafafa',
+    color: colors.text,
     textAlign: 'center',
     includeFontPadding: false,
   },
   brandDot: {
-    color: '#d4ff3a',
+    color: colors.accent,
   },
   tagline: {
     fontSize: 10,

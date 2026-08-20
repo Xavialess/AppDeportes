@@ -5,13 +5,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
-import { colors, radius, spacing } from '../../../lib/theme';
+import { colors, radius, spacing, matchStatus } from '../../../lib/theme';
 import { formatPrice } from '../../../lib/format';
+import CanchaLoader from '../../../components/CanchaLoader';
 
 type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 type EnrollmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
@@ -55,15 +56,6 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
   jugado: 'Jugado',
   completed: 'Jugado',
   cancelled: 'Cancelado',
-};
-
-const STATUS_STYLES: Record<MatchStatus, { bg: string; text: string }> = {
-  open: { bg: 'rgba(212,255,58,0.1)', text: colors.accent },
-  confirmed: { bg: 'rgba(96,165,250,0.1)', text: '#60a5fa' },
-  en_curso: { bg: 'rgba(251,191,36,0.12)', text: '#fbbf24' },
-  jugado: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
-  completed: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
-  cancelled: { bg: colors.errorBg, text: colors.error },
 };
 
 const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
@@ -291,7 +283,7 @@ export default function OwnerMatchDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -307,7 +299,7 @@ export default function OwnerMatchDetailScreen() {
     );
   }
 
-  const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
+  const statusStyle = matchStatus[match.status] ?? matchStatus.open;
   const canMarkAttendance = match.status === 'confirmed' || match.status === 'en_curso' || match.status === 'jugado' || match.status === 'completed';
   const canComplete = match.status === 'confirmed';
   const canCancel = match.status === 'open' || match.status === 'confirmed';
@@ -383,7 +375,7 @@ export default function OwnerMatchDetailScreen() {
             activeOpacity={0.8}
           >
             {completingMatch ? (
-              <ActivityIndicator color={colors.accentFg} />
+              <CanchaLoader variant="button" />
             ) : (
               <Text style={styles.completeButtonText}>Completar partido</Text>
             )}
@@ -415,7 +407,7 @@ export default function OwnerMatchDetailScreen() {
             activeOpacity={0.8}
           >
             {togglingVisibility ? (
-              <ActivityIndicator color={colors.text} />
+              <CanchaLoader variant="button" />
             ) : (
               <Text style={styles.visibilityButtonText}>
                 {match.is_visible ? 'Ocultar del listado' : 'Mostrar en listado'}
@@ -432,7 +424,7 @@ export default function OwnerMatchDetailScreen() {
               activeOpacity={0.8}
             >
               {cancellingMatch ? (
-                <ActivityIndicator color={colors.error} />
+                <CanchaLoader variant="button" />
               ) : (
                 <Text style={styles.cancelButtonText}>Cancelar partido</Text>
               )}
@@ -493,14 +485,13 @@ export default function OwnerMatchDetailScreen() {
                     activeOpacity={0.75}
                   >
                     {isUpdating ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={attended ? colors.accentFg : colors.accent}
-                      />
+                      <CanchaLoader variant="button" />
                     ) : (
-                      <Text style={[styles.attendanceToggleText, attended && styles.attendanceToggleTextActive]}>
-                        ✓
-                      </Text>
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color={attended ? colors.accentFg : colors.line2}
+                      />
                     )}
                   </TouchableOpacity>
                 )}
@@ -756,14 +747,6 @@ const styles = StyleSheet.create({
   attendanceToggleActive: {
     backgroundColor: colors.accent,
     borderColor: colors.accent,
-  },
-  attendanceToggleText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.line2,
-  },
-  attendanceToggleTextActive: {
-    color: colors.accentFg,
   },
   errorLarge: {
     fontSize: 15,

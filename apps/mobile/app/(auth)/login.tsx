@@ -8,13 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
-import { router, Link } from 'expo-router';
+import { Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
-
-type UserRole = 'player' | 'owner' | 'admin';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
+import CanchaLoader from '../../components/CanchaLoader';
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -54,35 +52,22 @@ export default function LoginScreen() {
 
       if (authError) {
         setError('Correo o contraseña incorrectos. Intenta de nuevo.');
+        setLoading(false);
         return;
       }
 
       if (!authData.session) {
         setError('No se pudo iniciar sesión. Intenta de nuevo.');
+        setLoading(false);
         return;
       }
 
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', authData.session.user.id)
-        .single();
-
-      if (userError || !userData) {
-        setError('No se pudo cargar tu perfil. Intenta de nuevo.');
-        return;
-      }
-
-      const role = userData.role as UserRole;
-
-      if (role === 'player') {
-        router.replace('/(tabs)/');
-      } else {
-        router.replace('/(owner)/');
-      }
+      // Session is now live — SessionGate (app/_layout.tsx) picks up the
+      // change, resolves the role once, and routes to the right destination.
+      // Keep the button in its loading state until that navigation happens,
+      // instead of fetching the role a second time here.
     } catch {
       setError('Ocurrió un error inesperado. Intenta de nuevo.');
-    } finally {
       setLoading(false);
     }
   }
@@ -147,7 +132,7 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color={colors.accentFg} />
+              <CanchaLoader variant="button" />
             ) : (
               <Text style={styles.buttonText}>Iniciar sesión</Text>
             )}
@@ -185,6 +170,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 36,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.8,
     marginBottom: spacing.sm,

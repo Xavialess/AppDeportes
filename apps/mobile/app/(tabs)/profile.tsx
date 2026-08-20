@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
 import { useSession } from '../../hooks/useSession';
+import CanchaLoader from '../../components/CanchaLoader';
 
 // ---- types ---------------------------------------------------------------
 
@@ -55,6 +57,7 @@ export default function ProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const hasDataRef = useRef(false);
 
   async function fetchProfile() {
     if (!user) return;
@@ -74,8 +77,11 @@ export default function ProfileScreen() {
   }
 
   async function loadData() {
-    setLoading(true);
+    // Only show the full loading state on first load — a refocus keeps the
+    // last-known profile on screen while it refreshes quietly underneath.
+    if (!hasDataRef.current) setLoading(true);
     await fetchProfile();
+    hasDataRef.current = true;
     setLoading(false);
   }
 
@@ -138,7 +144,7 @@ export default function ProfileScreen() {
 
       setProfile((prev) => prev ? { ...prev, avatar: publicUrl } : prev);
     } catch {
-      // silently ignore — user stays with current avatar
+      Alert.alert('Error', 'No se pudo subir la foto. Intenta de nuevo.');
     } finally {
       setUploadingAvatar(false);
     }
@@ -153,7 +159,7 @@ export default function ProfileScreen() {
   if (loading || sessionLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -214,11 +220,11 @@ export default function ProfileScreen() {
           )}
           {uploadingAvatar ? (
             <View style={styles.avatarOverlay}>
-              <ActivityIndicator size="small" color="#fff" />
+              <CanchaLoader variant="button" />
             </View>
           ) : (
             <View style={styles.avatarEditBadge}>
-              <Text style={styles.avatarEditIcon}>✎</Text>
+              <Ionicons name="pencil" size={13} color={colors.accentFg} />
             </View>
           )}
         </TouchableOpacity>
@@ -284,7 +290,7 @@ export default function ProfileScreen() {
         activeOpacity={0.75}
       >
         {signingOut ? (
-          <ActivityIndicator size="small" color={colors.error} />
+          <CanchaLoader variant="button" />
         ) : (
           <Text style={styles.signOutText}>Cerrar sesión</Text>
         )}
@@ -325,6 +331,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
   },
@@ -387,11 +394,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: colors.bg,
-  },
-  avatarEditIcon: {
-    fontSize: 13,
-    color: colors.accentFg,
-    fontWeight: '700',
   },
   nameBlock: {
     flex: 1,

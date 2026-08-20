@@ -18,7 +18,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   AppState,
   AppStateStatus,
@@ -26,8 +25,10 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, shadow } from '../../lib/theme';
+import CanchaLoader from '../../components/CanchaLoader';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -199,7 +200,7 @@ export default function DeunaPaymentScreen() {
     return (
       <View style={styles.centered}>
         <Stack.Screen options={stackOptions} />
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
         <Text style={styles.loadingText}>Generando código QR…</Text>
       </View>
     );
@@ -226,7 +227,7 @@ export default function DeunaPaymentScreen() {
       <View style={styles.centered}>
         <Stack.Screen options={{ ...stackOptions, headerBackVisible: false }} />
         <View style={styles.successIcon}>
-          <Text style={styles.successIconText}>✓</Text>
+          <Ionicons name="checkmark" size={36} color={colors.accentFg} />
         </View>
         <Text style={styles.stateTitle}>¡Pago confirmado!</Text>
         <Text style={styles.stateSubtitle}>Tu cupo está reservado. Nos vemos en la cancha.</Text>
@@ -289,7 +290,7 @@ export default function DeunaPaymentScreen() {
           />
         ) : (
           <View style={styles.qrPlaceholder}>
-            <ActivityIndicator color={colors.accent} />
+            <CanchaLoader variant="button" />
           </View>
         )}
       </View>
@@ -318,7 +319,7 @@ export default function DeunaPaymentScreen() {
 
       {/* Waiting + Verificar */}
       <View style={styles.waitingRow}>
-        <ActivityIndicator size="small" color={colors.dim} />
+        <CanchaLoader variant="button" />
         <Text style={styles.waitingText}>Esperando confirmación…</Text>
       </View>
 
@@ -330,7 +331,7 @@ export default function DeunaPaymentScreen() {
           activeOpacity={0.8}
         >
           {verifying ? (
-            <ActivityIndicator size="small" color={colors.accent} />
+            <CanchaLoader variant="button" />
           ) : (
             <Text style={styles.verifyText}>Verificar pago</Text>
           )}
@@ -386,11 +387,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: radius.cardLg,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    ...shadow.subtle,
     marginVertical: spacing.sm,
   },
   qrImage: {
@@ -404,7 +401,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   openDeunaButton: {
-    backgroundColor: '#00C6A2',
+    backgroundColor: colors.deunaBrand,
     borderRadius: radius.card,
     paddingVertical: 14,
     paddingHorizontal: 40,
@@ -437,7 +434,7 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   deunaBadge: {
-    backgroundColor: '#00C6A2',
+    backgroundColor: colors.deunaBrand,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: radius.badge,
@@ -485,11 +482,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
-  },
-  successIconText: {
-    fontSize: 36,
-    color: colors.accentFg,
-    fontWeight: '800',
   },
   stateTitle: {
     fontSize: 22,

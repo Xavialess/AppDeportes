@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   Image,
   RefreshControl,
 } from 'react-native';
@@ -13,7 +12,9 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useSession';
-import { colors, radius, spacing } from '../../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../../lib/theme';
+import SkeletonCard from '../../../components/SkeletonCard';
+import FadeIn from '../../../components/FadeIn';
 
 interface Club {
   id: string;
@@ -65,6 +66,7 @@ export default function ClubDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   async function load() {
     if (!id || !user) return;
@@ -97,8 +99,13 @@ export default function ClubDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      load().finally(() => setLoading(false));
+      // Only show the full loading state on first load — a refocus keeps
+      // the last-known content on screen while it refreshes quietly underneath.
+      if (!hasDataRef.current) setLoading(true);
+      load().finally(() => {
+        hasDataRef.current = true;
+        setLoading(false);
+      });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, user?.id])
   );
@@ -111,8 +118,10 @@ export default function ClubDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={[styles.flex, { paddingTop: insets.top + 80 }]}>
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonCard key={i} index={i} />
+        ))}
       </View>
     );
   }
@@ -129,7 +138,7 @@ export default function ClubDetailScreen() {
   }
 
   return (
-    <View style={styles.flex}>
+    <FadeIn style={styles.flex}>
       <FlatList
         data={fields}
         keyExtractor={(item) => item.id}
@@ -179,7 +188,7 @@ export default function ClubDetailScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </FadeIn>
   );
 }
 
@@ -234,6 +243,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.5,
   },

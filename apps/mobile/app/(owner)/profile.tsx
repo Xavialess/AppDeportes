@@ -7,17 +7,18 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
 import { useSession } from '../../hooks/useSession';
+import CanchaLoader from '../../components/CanchaLoader';
 
 interface OwnerProfile {
   id: string;
@@ -257,7 +258,7 @@ export default function OwnerProfileScreen() {
   if (loading || sessionLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -322,11 +323,11 @@ export default function OwnerProfileScreen() {
             )}
             {uploadingAvatar ? (
               <View style={styles.avatarOverlay}>
-                <ActivityIndicator size="small" color="#fff" />
+                <CanchaLoader variant="button" />
               </View>
             ) : (
               <View style={styles.avatarEditBadge}>
-                <Text style={styles.avatarEditIcon}>✎</Text>
+                <Ionicons name="pencil" size={13} color={colors.accentFg} />
               </View>
             )}
           </TouchableOpacity>
@@ -385,7 +386,7 @@ export default function OwnerProfileScreen() {
                   disabled={saving}
                 >
                   {saving ? (
-                    <ActivityIndicator size="small" color={colors.accentFg} />
+                    <CanchaLoader variant="button" />
                   ) : (
                     <Text style={styles.saveButtonText}>Guardar</Text>
                   )}
@@ -478,7 +479,7 @@ export default function OwnerProfileScreen() {
                   disabled={savingDeuna}
                 >
                   {savingDeuna ? (
-                    <ActivityIndicator size="small" color={colors.accentFg} />
+                    <CanchaLoader variant="button" />
                   ) : (
                     <Text style={styles.saveButtonText}>Guardar</Text>
                   )}
@@ -517,7 +518,7 @@ export default function OwnerProfileScreen() {
           activeOpacity={0.75}
         >
           {signingOut ? (
-            <ActivityIndicator size="small" color={colors.error} />
+            <CanchaLoader variant="button" />
           ) : (
             <Text style={styles.signOutText}>Cerrar sesión</Text>
           )}
@@ -561,6 +562,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
   },
@@ -623,11 +625,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: colors.bg,
-  },
-  avatarEditIcon: {
-    fontSize: 13,
-    color: colors.accentFg,
-    fontWeight: '700',
   },
   nameBlock: {
     flex: 1,
@@ -835,7 +832,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   deunaActiveBadge: {
-    backgroundColor: '#00C6A2',
+    backgroundColor: colors.deunaBrand,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,

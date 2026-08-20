@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
+import { colors, radius } from '../lib/theme';
 
 interface SkeletonCardProps {
   index?: number;
@@ -50,13 +51,12 @@ export default function SkeletonCard({ index = 0 }: SkeletonCardProps) {
   );
 }
 
-const BG = '#171717';
-const SHIMMER = 'rgba(255,255,255,0.07)';
+const SHIMMER = colors.line;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: BG,
-    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 10,
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   },
   line: {
     height: 12,
-    borderRadius: 6,
+    borderRadius: radius.badge,
     backgroundColor: SHIMMER,
   },
   lineLg: { width: '70%' },
@@ -83,13 +83,13 @@ const styles = StyleSheet.create({
   pillSm: {
     height: 22,
     width: 80,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: SHIMMER,
   },
   pillXs: {
     height: 22,
     width: 55,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     backgroundColor: SHIMMER,
   },
 });

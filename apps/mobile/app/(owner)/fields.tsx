@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   Image,
   RefreshControl,
 } from 'react-native';
@@ -13,7 +12,9 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
+import SkeletonCard from '../../components/SkeletonCard';
+import FadeIn from '../../components/FadeIn';
 
 interface Club {
   id: string;
@@ -58,6 +59,7 @@ export default function OwnerComplejos() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   async function loadClubs() {
     if (!user) return;
@@ -79,8 +81,13 @@ export default function OwnerComplejos() {
   useFocusEffect(
     useCallback(() => {
       if (!sessionLoading && user) {
-        setLoading(true);
-        loadClubs().finally(() => setLoading(false));
+        // Only show the full loading state on first load — a refocus keeps
+        // the last-known list on screen while it refreshes quietly underneath.
+        if (!hasDataRef.current) setLoading(true);
+        loadClubs().finally(() => {
+          hasDataRef.current = true;
+          setLoading(false);
+        });
       } else if (!sessionLoading) {
         setLoading(false);
       }
@@ -96,14 +103,16 @@ export default function OwnerComplejos() {
 
   if (loading || sessionLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={[styles.flex, { paddingTop: insets.top + 80 }]}>
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonCard key={i} index={i} />
+        ))}
       </View>
     );
   }
 
   return (
-    <View style={styles.flex}>
+    <FadeIn style={styles.flex}>
       <FlatList
         data={clubs}
         keyExtractor={(item) => item.id}
@@ -147,7 +156,7 @@ export default function OwnerComplejos() {
         }
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </FadeIn>
   );
 }
 
@@ -177,6 +186,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
   },

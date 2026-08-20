@@ -12,6 +12,8 @@ export default function MatchLayout() {
         headerBackTitle: 'Atrás',
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
+        animation: 'slide_from_right',
+        animationDuration: 220,
       }}
     />
   );

@@ -8,13 +8,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
 import { colors, radius, spacing } from '../../lib/theme';
+import CanchaLoader from '../../components/CanchaLoader';
 
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -283,7 +284,7 @@ export default function PostMatchScreen() {
   if (loadingData) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -306,7 +307,7 @@ export default function PostMatchScreen() {
     return (
       <View style={styles.centered}>
         <View style={styles.successCircle}>
-          <Text style={styles.successCheck}>✓</Text>
+          <Ionicons name="checkmark" size={36} color={colors.accentFg} />
         </View>
         <Text style={styles.successTitle}>¡Partido publicado!</Text>
         <Text style={styles.successText}>Redirigiendo al panel…</Text>
@@ -638,7 +639,7 @@ export default function PostMatchScreen() {
           activeOpacity={0.8}
         >
           {submitting ? (
-            <ActivityIndicator color={colors.accentFg} />
+            <CanchaLoader variant="button" />
           ) : (
             <Text style={styles.submitButtonText}>Publicar partido</Text>
           )}
@@ -881,11 +882,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
-  },
-  successCheck: {
-    fontSize: 36,
-    color: colors.accentFg,
-    fontWeight: '700',
   },
   successTitle: {
     fontSize: 22,

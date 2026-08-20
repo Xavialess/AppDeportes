@@ -8,11 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { router, Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
+import CanchaLoader from '../../components/CanchaLoader';
 
 type UserRole = 'player' | 'owner';
 
@@ -225,7 +225,7 @@ export default function RegisterScreen() {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color={colors.accentFg} />
+              <CanchaLoader variant="button" />
             ) : (
               <Text style={styles.buttonText}>Crear cuenta</Text>
             )}
@@ -263,6 +263,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
     marginBottom: spacing.sm,

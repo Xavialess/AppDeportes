@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, matchStatus, shadow, fonts } from '../../lib/theme';
+import SkeletonCard from '../../components/SkeletonCard';
+import FadeIn from '../../components/FadeIn';
 
 type MatchStatus = 'open' | 'confirmed' | 'en_curso' | 'jugado' | 'completed' | 'cancelled';
 
@@ -40,15 +41,6 @@ const STATUS_LABELS: Record<MatchStatus, string> = {
   cancelled: 'Cancelado',
 };
 
-const STATUS_STYLES: Record<MatchStatus, { bg: string; text: string }> = {
-  open: { bg: 'rgba(212,255,58,0.1)', text: colors.accent },
-  confirmed: { bg: 'rgba(96,165,250,0.1)', text: '#60a5fa' },
-  en_curso: { bg: 'rgba(251,191,36,0.12)', text: '#fbbf24' },
-  jugado: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
-  completed: { bg: 'rgba(52,211,153,0.1)', text: '#34d399' },
-  cancelled: { bg: colors.errorBg, text: colors.error },
-};
-
 const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -59,7 +51,7 @@ function formatMatchDate(dateStr: string, timeStr: string): string {
 }
 
 function MatchCard({ match }: { match: Match }) {
-  const statusStyle = STATUS_STYLES[match.status] ?? STATUS_STYLES.open;
+  const statusStyle = matchStatus[match.status] ?? matchStatus.open;
   const enrolled = match.enrolled_count ?? 0;
   const max = match.max_players;
   const coverImage = match.fields?.images?.[0] ?? null;
@@ -129,39 +121,17 @@ export default function OwnerHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   async function loadMatches() {
     if (!user) return;
     try {
-      // Ownership is now via clubs — get owner's club ids first, then field ids
-      const { data: clubsData, error: clubsError } = await supabase
-        .from('clubs')
-        .select('id')
-        .eq('owner_id', user.id);
-
-      if (clubsError) throw clubsError;
-
-      const clubIds = (clubsData ?? []).map((c: { id: string }) => c.id);
-
-      const fieldIds: string[] = [];
-      if (clubIds.length > 0) {
-        const { data: fieldsData, error: fieldsError } = await supabase
-          .from('fields')
-          .select('id')
-          .in('club_id', clubIds);
-        if (fieldsError) throw fieldsError;
-        fieldIds.push(...(fieldsData ?? []).map((f: { id: string }) => f.id));
-      }
-
-      if (fieldIds.length === 0) {
-        setMatches([]);
-        return;
-      }
-
+      // Ownership via fields -> clubs -> owner_id, filtered in a single joined query
+      // instead of a clubs -> fields -> matches round-trip chain.
       const { data, error: matchesError } = await supabase
         .from('matches')
-        .select('id, date, start_time, end_time, status, type, max_players, format, sports(name), fields(name, images), enrollments(id, status)')
-        .in('field_id', fieldIds)
+        .select('id, date, start_time, end_time, status, type, max_players, format, sports(name), fields!inner(name, images, clubs!inner(owner_id)), enrollments(id, status)')
+        .eq('fields.clubs.owner_id', user.id)
         .order('date', { ascending: false })
         .order('start_time', { ascending: false });
 
@@ -181,20 +151,22 @@ export default function OwnerHomeScreen() {
     }
   }
 
-  useEffect(() => {
-    if (!sessionLoading && user) {
-      loadMatches().finally(() => setLoading(false));
-    } else if (!sessionLoading && !user) {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, sessionLoading]);
-
   useFocusEffect(
     useCallback(() => {
-      if (user) loadMatches();
+      if (sessionLoading) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      // Only show the full loading state on first load — a refocus keeps the
+      // last-known list on screen while it refreshes quietly underneath.
+      if (!hasDataRef.current) setLoading(true);
+      loadMatches().finally(() => {
+        hasDataRef.current = true;
+        setLoading(false);
+      });
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user])
+    }, [user, sessionLoading])
   );
 
   async function handleRefresh() {
@@ -205,14 +177,17 @@ export default function OwnerHomeScreen() {
 
   if (loading || sessionLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={[styles.flex, { paddingTop: insets.top + 80 }]}>
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonCard key={i} index={i} />
+        ))}
       </View>
     );
   }
 
   return (
     <View style={styles.flex}>
+      <FadeIn style={styles.fadeFlex}>
       <FlatList
         data={matches}
         keyExtractor={(item) => item.id}
@@ -268,6 +243,7 @@ export default function OwnerHomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+      </FadeIn>
 
       <TouchableOpacity
         style={styles.fab}
@@ -284,6 +260,9 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  fadeFlex: {
+    flex: 1,
   },
   centered: {
     flex: 1,
@@ -309,6 +288,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
   },
@@ -507,11 +487,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    ...shadow.floating,
   },
   fabText: {
     color: colors.accentFg,

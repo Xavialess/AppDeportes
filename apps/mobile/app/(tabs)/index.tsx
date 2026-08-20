@@ -16,9 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
 import { formatPrice } from '../../lib/format';
 import SkeletonCard from '../../components/SkeletonCard';
+import FadeIn from '../../components/FadeIn';
 
 const CITY_STORE_KEY = 'selected_city_id';
 
@@ -463,6 +464,7 @@ export default function MatchListScreen() {
 
   return (
     <View style={styles.container}>
+      <FadeIn style={styles.fadeFlex}>
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
@@ -507,6 +509,7 @@ export default function MatchListScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+      </FadeIn>
 
       {renderCityPicker()}
     </View>
@@ -519,6 +522,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  fadeFlex: {
+    flex: 1,
   },
   list: {
     paddingBottom: 40,
@@ -545,6 +551,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
   },

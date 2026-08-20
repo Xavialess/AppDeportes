@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,11 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, fonts } from '../../lib/theme';
 import { useSession } from '../../hooks/useSession';
 import { formatPrice } from '../../lib/format';
 import SkeletonCard from '../../components/SkeletonCard';
+import FadeIn from '../../components/FadeIn';
 
 // ---- types ---------------------------------------------------------------
 
@@ -106,6 +107,7 @@ export default function MyMatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   async function fetchEnrollments() {
     if (!user) return;
@@ -127,8 +129,11 @@ export default function MyMatchesScreen() {
   }
 
   async function loadData() {
-    setLoading(true);
+    // Only show the full skeleton on first load — a refocus keeps the
+    // last-known list on screen while it refreshes quietly underneath.
+    if (!hasDataRef.current) setLoading(true);
     await fetchEnrollments();
+    hasDataRef.current = true;
     setLoading(false);
   }
 
@@ -232,6 +237,7 @@ export default function MyMatchesScreen() {
 
   return (
     <View style={styles.container}>
+      <FadeIn style={styles.fadeFlex}>
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
@@ -265,6 +271,7 @@ export default function MyMatchesScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+      </FadeIn>
     </View>
   );
 }
@@ -275,6 +282,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  fadeFlex: {
+    flex: 1,
   },
   centered: {
     flex: 1,
@@ -301,6 +311,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 30,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.6,
   },

@@ -5,17 +5,18 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Alert,
   Image,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../hooks/useSession';
-import { colors, radius, spacing } from '../../lib/theme';
+import { colors, radius, spacing, matchStatus, fonts } from '../../lib/theme';
 import { formatPrice } from '../../lib/format';
+import CanchaLoader from '../../components/CanchaLoader';
 
 // ---- types ---------------------------------------------------------------
 
@@ -29,6 +30,7 @@ interface Field {
   id: string;
   name: string;
   city_id: string;
+  images: string[] | null;
   clubs: { name: string; address: string } | null;
 }
 
@@ -156,65 +158,49 @@ export default function MatchDetailScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: matchErr } = await supabase
-        .from('matches')
-        .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sports(id, name, icon), fields(id, name, city_id, clubs(name, address))')
-        .eq('id', id)
-        .single();
+      const [matchRes, countRes, enrollmentsRes, myEnrollRes] = await Promise.all([
+        supabase
+          .from('matches')
+          .select('id, date, start_time, end_time, format, type, status, price_per_player, min_players, max_players, confirmation_deadline, sports(id, name, icon), fields(id, name, city_id, images, clubs(name, address))')
+          .eq('id', id)
+          .single(),
+        supabase
+          .from('enrollments')
+          .select('id', { count: 'exact', head: true })
+          .eq('match_id', id)
+          .in('status', ['pending', 'confirmed']),
+        // Fetch enrolled players (visible after RLS migration 21)
+        supabase
+          .from('enrollments')
+          .select('user_id, users(id, name)')
+          .eq('match_id', id)
+          .in('status', ['pending', 'confirmed']),
+        user?.id
+          ? supabase
+              .from('enrollments')
+              .select('id')
+              .eq('match_id', id)
+              .eq('user_id', user.id)
+              .in('status', ['pending', 'confirmed'])
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
 
+      const { data, error: matchErr } = matchRes;
       if (matchErr || !data) throw matchErr ?? new Error('Partido no encontrado');
+      if (countRes.error) throw countRes.error;
 
       const raw = data as unknown as Omit<MatchDetail, 'enrolled_count'>;
-
-      const { count: enrollCount, error: countErr } = await supabase
-        .from('enrollments')
-        .select('id', { count: 'exact', head: true })
-        .eq('match_id', id)
-        .in('status', ['pending', 'confirmed']);
-
-      if (countErr) throw countErr;
-
-      const fullMatch: MatchDetail = { ...raw, enrolled_count: enrollCount ?? 0 };
+      const fullMatch: MatchDetail = { ...raw, enrolled_count: countRes.count ?? 0 };
       setMatch(fullMatch);
+      setHeroUrl(raw.fields?.images?.[0] ?? null);
 
-      // Fetch hero image from storage
-      if (raw.fields?.id) {
-        try {
-          const { data: files } = await supabase.storage
-            .from('field-images')
-            .list(raw.fields.id);
-          if (files && files.length > 0) {
-            const { data: urlData } = supabase.storage
-              .from('field-images')
-              .getPublicUrl(`${raw.fields.id}/${files[0].name}`);
-            setHeroUrl(urlData?.publicUrl ?? null);
-          }
-        } catch {
-          // non-fatal: hero image is optional
-        }
-      }
-
-      if (user?.id) {
-        const { data: enrollRow } = await supabase
-          .from('enrollments')
-          .select('id')
-          .eq('match_id', id)
-          .eq('user_id', user.id)
-          .in('status', ['pending', 'confirmed'])
-          .maybeSingle();
-        setIsEnrolled(!!enrollRow);
-        setEnrollmentId(enrollRow?.id ?? null);
-      }
-
-      // Fetch enrolled players (visible after RLS migration 21)
-      const { data: enrollmentsData } = await supabase
-        .from('enrollments')
-        .select('user_id, users(id, name)')
-        .eq('match_id', id)
-        .in('status', ['pending', 'confirmed']);
+      const enrollRow = myEnrollRes.data as { id: string } | null;
+      setIsEnrolled(!!enrollRow);
+      setEnrollmentId(enrollRow?.id ?? null);
 
       setPlayers(
-        (enrollmentsData ?? []).map((e: any) => ({
+        (enrollmentsRes.data ?? []).map((e: any) => ({
           id: e.user_id,
           name: e.users?.name ?? null,
         }))
@@ -275,7 +261,7 @@ export default function MatchDetailScreen() {
     return (
       <View style={styles.centered}>
         <Stack.Screen options={{ title: 'Partido', headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.text }} />
-        <ActivityIndicator size="large" color={colors.accent} />
+        <CanchaLoader variant="full" />
       </View>
     );
   }
@@ -451,15 +437,21 @@ export default function MatchDetailScreen() {
         {isPast ? (
           // Past match — view only regardless of enrollment
           <View style={[styles.ctaButton, styles.ctaDisabled]}>
-            <Text style={styles.ctaButtonText}>
-              {isEnrolled ? '✓ Participaste en este partido' : 'Partido finalizado'}
-            </Text>
+            {isEnrolled ? (
+              <View style={styles.ctaButtonRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.mute} />
+                <Text style={[styles.ctaButtonText, styles.ctaButtonTextDisabled]}>Participaste en este partido</Text>
+              </View>
+            ) : (
+              <Text style={[styles.ctaButtonText, styles.ctaButtonTextDisabled]}>Partido finalizado</Text>
+            )}
           </View>
         ) : isEnrolled ? (
           // Enrolled in a future/active match
           <>
-            <View style={styles.enrolledBadge}>
-              <Text style={styles.enrolledBadgeText}>✓ Ya estás inscrito</Text>
+            <View style={[styles.enrolledBadge, styles.ctaButtonRow]}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+              <Text style={styles.enrolledBadgeText}>Ya estás inscrito</Text>
             </View>
             {canWithdraw && (
               <TouchableOpacity
@@ -475,15 +467,15 @@ export default function MatchDetailScreen() {
           </>
         ) : isFull ? (
           <View style={[styles.ctaButton, styles.ctaDisabled]}>
-            <Text style={styles.ctaButtonText}>Lleno</Text>
+            <Text style={[styles.ctaButtonText, styles.ctaButtonTextDisabled]}>Lleno</Text>
           </View>
         ) : isCancelled ? (
           <View style={[styles.ctaButton, styles.ctaDisabled]}>
-            <Text style={styles.ctaButtonText}>Partido cancelado</Text>
+            <Text style={[styles.ctaButtonText, styles.ctaButtonTextDisabled]}>Partido cancelado</Text>
           </View>
         ) : !enrollAllowed ? (
           <View style={[styles.ctaButton, styles.ctaDisabled]}>
-            <Text style={styles.ctaButtonText}>Inscripción cerrada</Text>
+            <Text style={[styles.ctaButtonText, styles.ctaButtonTextDisabled]}>Inscripción cerrada</Text>
           </View>
         ) : (
           <TouchableOpacity
@@ -608,6 +600,7 @@ const styles = StyleSheet.create({
   sportTitle: {
     fontSize: 22,
     fontWeight: '700',
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.4,
   },
@@ -621,19 +614,19 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   badgeOpen: {
-    backgroundColor: 'rgba(212,255,58,0.1)',
+    backgroundColor: matchStatus.open.bg,
   },
   badgeConfirmed: {
-    backgroundColor: 'rgba(96,165,250,0.1)',
+    backgroundColor: matchStatus.confirmed.bg,
   },
   badgeCancelled: {
-    backgroundColor: colors.errorBg,
+    backgroundColor: matchStatus.cancelled.bg,
   },
   badgeInProgress: {
-    backgroundColor: 'rgba(251,146,60,0.12)',
+    backgroundColor: matchStatus.en_curso.bg,
   },
   badgePast: {
-    backgroundColor: 'rgba(148,163,184,0.12)',
+    backgroundColor: matchStatus.jugado.bg,
   },
   badgeText: {
     fontSize: 11,
@@ -641,19 +634,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   badgeTextOpen: {
-    color: colors.accent,
+    color: matchStatus.open.text,
   },
   badgeTextConfirmed: {
-    color: '#60a5fa',
+    color: matchStatus.confirmed.text,
   },
   badgeTextCancelled: {
-    color: colors.error,
+    color: matchStatus.cancelled.text,
   },
   badgeTextInProgress: {
-    color: '#fb923c',
+    color: matchStatus.en_curso.text,
   },
   badgeTextPast: {
-    color: '#94a3b8',
+    color: matchStatus.jugado.text,
   },
   infoCard: {
     backgroundColor: colors.card,
@@ -715,6 +708,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  ctaButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  ctaButtonTextDisabled: {
+    color: colors.mute,
   },
   enrolledBadge: {
     backgroundColor: 'rgba(212,255,58,0.1)',

@@ -279,25 +279,38 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Cancel (not revert to pending) — zombie De Una enrollments held the slot
   // without payment. Player must re-enroll to try again. Matches in-person
   // flow separation: only in_person enrollments use 'pending' as their resting state.
-  const { error: zombieErr, count: zombieCount } = await supabase
-    .from('enrollments')
-    .update({ status: 'cancelled' satisfies EnrollmentStatus })
-    .eq('status', 'payment_pending' satisfies EnrollmentStatus)
-    .in(
-      'id',
-      supabase
-        .from('payments')
-        .select('enrollment_id')
-        .eq('provider', 'deuna')
-        .eq('status', 'pending')
-        .lt('created_at', zombieThreshold),
-    );
+  // PostgREST has no subquery support: resolve the stale payments first, then
+  // pass the enrollment ids as an array (.in() throws on a query builder).
+  let zombieCount = 0;
+  const { data: stalePayments, error: staleErr } = await supabase
+    .from('payments')
+    .select('enrollment_id')
+    .eq('provider', 'deuna')
+    .eq('status', 'pending')
+    .lt('created_at', zombieThreshold);
 
-  if (zombieErr) {
-    console.error(JSON.stringify({ event: 'zombie_cleanup_error', error: zombieErr.message }));
+  if (staleErr) {
+    console.error(JSON.stringify({ event: 'zombie_cleanup_error', error: staleErr.message }));
   } else {
-    console.log(JSON.stringify({ event: 'zombie_cleanup_complete', reset_count: zombieCount ?? 0 }));
+    const zombieEnrollmentIds = (stalePayments ?? [])
+      .map((p: { enrollment_id: string | null }) => p.enrollment_id)
+      .filter((id): id is string => id !== null);
+
+    if (zombieEnrollmentIds.length > 0) {
+      const { error: zombieErr, count } = await supabase
+        .from('enrollments')
+        .update({ status: 'cancelled' satisfies EnrollmentStatus }, { count: 'exact' })
+        .eq('status', 'payment_pending' satisfies EnrollmentStatus)
+        .in('id', zombieEnrollmentIds);
+
+      if (zombieErr) {
+        console.error(JSON.stringify({ event: 'zombie_cleanup_error', error: zombieErr.message }));
+      } else {
+        zombieCount = count ?? 0;
+      }
+    }
+    console.log(JSON.stringify({ event: 'zombie_cleanup_complete', reset_count: zombieCount }));
   }
 
-  return jsonResponse({ ...summary, zombie_slots_freed: zombieCount ?? 0 });
+  return jsonResponse({ ...summary, zombie_slots_freed: zombieCount });
 });
